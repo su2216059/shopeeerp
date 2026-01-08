@@ -18,8 +18,16 @@
     </sql>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.Product" useGeneratedKeys="true" keyProperty="productId">
-        INSERT INTO products (sku, name, description, price, category_id, created_at, updated_at)
-        VALUES (#{sku}, #{name}, #{description}, #{price}, #{categoryId}, #{createdAt}, #{updatedAt})
+        INSERT INTO products 
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">product_id,</if>
+            sku, name, description, price, category_id, created_at, updated_at
+        </trim>
+        VALUES 
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="productId != null">#{productId},</if>
+            #{sku}, #{name}, #{description}, #{price}, #{categoryId}, #{createdAt}, #{updatedAt}
+        </trim>
     </insert>
 
     <delete id="deleteById" parameterType="java.lang.Long">

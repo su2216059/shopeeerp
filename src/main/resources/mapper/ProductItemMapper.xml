@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.ProductItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.ProductItem">
+        <id column="item_id" property="itemId" jdbcType="BIGINT"/>
+        <result column="ozon_id" property="ozonId" jdbcType="BIGINT"/>
+        <result column="offer_id" property="offerId" jdbcType="VARCHAR"/>
+        <result column="sku" property="sku" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="old_price" property="oldPrice" jdbcType="DECIMAL"/>
+        <result column="min_price" property="minPrice" jdbcType="DECIMAL"/>
+        <result column="currency_code" property="currencyCode" jdbcType="VARCHAR"/>
+        <result column="description_category_id" property="descriptionCategoryId" jdbcType="BIGINT"/>
+        <result column="type_id" property="typeId" jdbcType="BIGINT"/>
+        <result column="vat" property="vat" jdbcType="VARCHAR"/>
+        <result column="volume_weight" property="volumeWeight" jdbcType="DECIMAL"/>
+        <result column="is_archived" property="isArchived" jdbcType="TINYINT"/>
+        <result column="is_autoarchived" property="isAutoarchived" jdbcType="TINYINT"/>
+        <result column="is_discounted" property="isDiscounted" jdbcType="TINYINT"/>
+        <result column="is_kgt" property="isKgt" jdbcType="TINYINT"/>
+        <result column="is_prepayment_allowed" property="isPrepaymentAllowed" jdbcType="TINYINT"/>
+        <result column="is_super" property="isSuper" jdbcType="TINYINT"/>
+        <result column="has_discounted_fbo_item" property="hasDiscountedFboItem" jdbcType="TINYINT"/>
+        <result column="discounted_fbo_stocks" property="discountedFboStocks" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="moderate_status" property="moderateStatus" jdbcType="VARCHAR"/>
+        <result column="validation_status" property="validationStatus" jdbcType="VARCHAR"/>
+        <result column="status_description" property="statusDescription" jdbcType="VARCHAR"/>
+        <result column="status_name" property="statusName" jdbcType="VARCHAR"/>
+        <result column="status_failed" property="statusFailed" jdbcType="VARCHAR"/>
+        <result column="is_created" property="isCreated" jdbcType="TINYINT"/>
+        <result column="primary_image" property="primaryImage" jdbcType="VARCHAR"/>
+        <result column="images" property="images" jdbcType="VARCHAR"/>
+        <result column="images360" property="images360" jdbcType="VARCHAR"/>
+        <result column="color_image" property="colorImage" jdbcType="VARCHAR"/>
+        <result column="barcodes" property="barcodes" jdbcType="VARCHAR"/>
+        <result column="stocks_info" property="stocksInfo" jdbcType="VARCHAR"/>
+        <result column="sources_info" property="sourcesInfo" jdbcType="VARCHAR"/>
+        <result column="availabilities_info" property="availabilitiesInfo" jdbcType="VARCHAR"/>
+        <result column="commissions_info" property="commissionsInfo" jdbcType="VARCHAR"/>
+        <result column="promotions_info" property="promotionsInfo" jdbcType="VARCHAR"/>
+        <result column="price_indexes_info" property="priceIndexesInfo" jdbcType="VARCHAR"/>
+        <result column="errors_info" property="errorsInfo" jdbcType="VARCHAR"/>
+        <result column="model_info" property="modelInfo" jdbcType="VARCHAR"/>
+        <result column="visibility_details" property="visibilityDetails" jdbcType="VARCHAR"/>
+        <result column="ozon_created_at" property="ozonCreatedAt" jdbcType="TIMESTAMP"/>
+        <result column="ozon_updated_at" property="ozonUpdatedAt" jdbcType="TIMESTAMP"/>
+        <result column="status_updated_at" property="statusUpdatedAt" jdbcType="TIMESTAMP"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        item_id, ozon_id, offer_id, sku, name, price, old_price, min_price, currency_code,
+        description_category_id, type_id, vat, volume_weight, is_archived, is_autoarchived,
+        is_discounted, is_kgt, is_prepayment_allowed, is_super, has_discounted_fbo_item,
+        discounted_fbo_stocks, status, moderate_status, validation_status, status_description,
+        status_name, status_failed, is_created, primary_image, images, images360, color_image,
+        barcodes, stocks_info, sources_info, availabilities_info, commissions_info, promotions_info,
+        price_indexes_info, errors_info, model_info, visibility_details, ozon_created_at,
+        ozon_updated_at, status_updated_at, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.ProductItem" useGeneratedKeys="true" keyProperty="itemId">
+        INSERT INTO product_items (
+            ozon_id, offer_id, sku, name, price, old_price, min_price, currency_code,
+            description_category_id, type_id, vat, volume_weight, is_archived, is_autoarchived,
+            is_discounted, is_kgt, is_prepayment_allowed, is_super, has_discounted_fbo_item,
+            discounted_fbo_stocks, status, moderate_status, validation_status, status_description,
+            status_name, status_failed, is_created, primary_image, images, images360, color_image,
+            barcodes, stocks_info, sources_info, availabilities_info, commissions_info, promotions_info,
+            price_indexes_info, errors_info, model_info, visibility_details, ozon_created_at,
+            ozon_updated_at, status_updated_at, created_at, updated_at
+        ) VALUES (
+            #{ozonId}, #{offerId}, #{sku}, #{name}, #{price}, #{oldPrice}, #{minPrice}, #{currencyCode},
+            #{descriptionCategoryId}, #{typeId}, #{vat}, #{volumeWeight}, #{isArchived}, #{isAutoarchived},
+            #{isDiscounted}, #{isKgt}, #{isPrepaymentAllowed}, #{isSuper}, #{hasDiscountedFboItem},
+            #{discountedFboStocks}, #{status}, #{moderateStatus}, #{validationStatus}, #{statusDescription},
+            #{statusName}, #{statusFailed}, #{isCreated}, #{primaryImage}, #{images}, #{images360}, #{colorImage},
+            #{barcodes}, #{stocksInfo}, #{sourcesInfo}, #{availabilitiesInfo}, #{commissionsInfo}, #{promotionsInfo},
+            #{priceIndexesInfo}, #{errorsInfo}, #{modelInfo}, #{visibilityDetails}, #{ozonCreatedAt},
+            #{ozonUpdatedAt}, #{statusUpdatedAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM product_items WHERE item_id = #{itemId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.ProductItem">
+        UPDATE product_items
+        SET ozon_id = #{ozonId},
+            offer_id = #{offerId},
+            sku = #{sku},
+            name = #{name},
+            price = #{price},
+            old_price = #{oldPrice},
+            min_price = #{minPrice},
+            currency_code = #{currencyCode},
+            description_category_id = #{descriptionCategoryId},
+            type_id = #{typeId},
+            vat = #{vat},
+            volume_weight = #{volumeWeight},
+            is_archived = #{isArchived},
+            is_autoarchived = #{isAutoarchived},
+            is_discounted = #{isDiscounted},
+            is_kgt = #{isKgt},
+            is_prepayment_allowed = #{isPrepaymentAllowed},
+            is_super = #{isSuper},
+            has_discounted_fbo_item = #{hasDiscountedFboItem},
+            discounted_fbo_stocks = #{discountedFboStocks},
+            status = #{status},
+            moderate_status = #{moderateStatus},
+            validation_status = #{validationStatus},
+            status_description = #{statusDescription},
+            status_name = #{statusName},
+            status_failed = #{statusFailed},
+            is_created = #{isCreated},
+            primary_image = #{primaryImage},
+            images = #{images},
+            images360 = #{images360},
+            color_image = #{colorImage},
+            barcodes = #{barcodes},
+            stocks_info = #{stocksInfo},
+            sources_info = #{sourcesInfo},
+            availabilities_info = #{availabilitiesInfo},
+            commissions_info = #{commissionsInfo},
+            promotions_info = #{promotionsInfo},
+            price_indexes_info = #{priceIndexesInfo},
+            errors_info = #{errorsInfo},
+            model_info = #{modelInfo},
+            visibility_details = #{visibilityDetails},
+            ozon_created_at = #{ozonCreatedAt},
+            ozon_updated_at = #{ozonUpdatedAt},
+            status_updated_at = #{statusUpdatedAt},
+            updated_at = #{updatedAt}
+        WHERE item_id = #{itemId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        WHERE item_id = #{itemId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByOzonId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        WHERE ozon_id = #{ozonId}
+    </select>
+
+    <select id="selectByOfferId" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        WHERE offer_id = #{offerId}
+    </select>
+
+    <select id="selectBySku" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        WHERE sku = #{sku}
+    </select>
+
+    <select id="selectByStatus" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        WHERE status = #{status}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByArchived" parameterType="java.lang.Boolean" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_items
+        WHERE is_archived = #{isArchived}
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>
