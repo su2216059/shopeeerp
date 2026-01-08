@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.SalesDataMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.SalesData">
+        <id column="sales_id" property="salesId" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
+        <result column="sales_date" property="salesDate" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        sales_id, product_id, order_id, quantity, total_amount, sales_date
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.SalesData" useGeneratedKeys="true" keyProperty="salesId">
+        INSERT INTO sales_data (product_id, order_id, quantity, total_amount, sales_date)
+        VALUES (#{productId}, #{orderId}, #{quantity}, #{totalAmount}, #{salesDate})
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM sales_data WHERE sales_id = #{salesId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.SalesData">
+        UPDATE sales_data
+        SET product_id = #{productId},
+            order_id = #{orderId},
+            quantity = #{quantity},
+            total_amount = #{totalAmount},
+            sales_date = #{salesDate}
+        WHERE sales_id = #{salesId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sales_data
+        WHERE sales_id = #{salesId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sales_data
+    </select>
+
+    <select id="selectByProductId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sales_data
+        WHERE product_id = #{productId}
+    </select>
+
+    <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sales_data
+        WHERE order_id = #{orderId}
+    </select>
+
+</mapper>

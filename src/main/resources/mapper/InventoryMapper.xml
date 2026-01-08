@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.InventoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Inventory">
+        <id column="inventory_id" property="inventoryId" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="warehouse_id" property="warehouseId" jdbcType="BIGINT"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="last_updated" property="lastUpdated" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        inventory_id, product_id, warehouse_id, quantity, last_updated
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.Inventory" useGeneratedKeys="true" keyProperty="inventoryId">
+        INSERT INTO inventory (product_id, warehouse_id, quantity, last_updated)
+        VALUES (#{productId}, #{warehouseId}, #{quantity}, #{lastUpdated})
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM inventory WHERE inventory_id = #{inventoryId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.Inventory">
+        UPDATE inventory
+        SET product_id = #{productId},
+            warehouse_id = #{warehouseId},
+            quantity = #{quantity},
+            last_updated = #{lastUpdated}
+        WHERE inventory_id = #{inventoryId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        WHERE inventory_id = #{inventoryId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+    </select>
+
+    <select id="selectByProductId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        WHERE product_id = #{productId}
+    </select>
+
+    <select id="selectByWarehouseId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        WHERE warehouse_id = #{warehouseId}
+    </select>
+
+</mapper>

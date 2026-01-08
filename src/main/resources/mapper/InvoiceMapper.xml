@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.InvoiceMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Invoice">
+        <id column="invoice_id" property="invoiceId" jdbcType="BIGINT"/>
+        <result column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="invoice_number" property="invoiceNumber" jdbcType="VARCHAR"/>
+        <result column="issue_date" property="issueDate" jdbcType="TIMESTAMP"/>
+        <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        invoice_id, order_id, invoice_number, issue_date, total_amount
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.Invoice" useGeneratedKeys="true" keyProperty="invoiceId">
+        INSERT INTO invoices (order_id, invoice_number, issue_date, total_amount)
+        VALUES (#{orderId}, #{invoiceNumber}, #{issueDate}, #{totalAmount})
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM invoices WHERE invoice_id = #{invoiceId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.Invoice">
+        UPDATE invoices
+        SET order_id = #{orderId},
+            invoice_number = #{invoiceNumber},
+            issue_date = #{issueDate},
+            total_amount = #{totalAmount}
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM invoices
+        WHERE invoice_id = #{invoiceId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM invoices
+    </select>
+
+    <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM invoices
+        WHERE order_id = #{orderId}
+    </select>
+
+</mapper>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Order">
+        <id column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="customer_id" property="customerId" jdbcType="BIGINT"/>
+        <result column="order_status" property="orderStatus" jdbcType="VARCHAR"/>
+        <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
+        <result column="payment_status" property="paymentStatus" jdbcType="VARCHAR"/>
+        <result column="shipping_status" property="shippingStatus" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        order_id, customer_id, order_status, total_amount, payment_status, shipping_status, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.Order" useGeneratedKeys="true" keyProperty="orderId">
+        INSERT INTO orders (customer_id, order_status, total_amount, payment_status, shipping_status, created_at, updated_at)
+        VALUES (#{customerId}, #{orderStatus}, #{totalAmount}, #{paymentStatus}, #{shippingStatus}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM orders WHERE order_id = #{orderId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.Order">
+        UPDATE orders
+        SET customer_id = #{customerId},
+            order_status = #{orderStatus},
+            total_amount = #{totalAmount},
+            payment_status = #{paymentStatus},
+            shipping_status = #{shippingStatus},
+            updated_at = #{updatedAt}
+        WHERE order_id = #{orderId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM orders
+        WHERE order_id = #{orderId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM orders
+    </select>
+
+    <select id="selectByCustomerId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM orders
+        WHERE customer_id = #{customerId}
+    </select>
+
+</mapper>

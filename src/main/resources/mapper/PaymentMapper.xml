@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.PaymentMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Payment">
+        <id column="payment_id" property="paymentId" jdbcType="BIGINT"/>
+        <result column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="payment_amount" property="paymentAmount" jdbcType="DECIMAL"/>
+        <result column="payment_method" property="paymentMethod" jdbcType="VARCHAR"/>
+        <result column="payment_status" property="paymentStatus" jdbcType="VARCHAR"/>
+        <result column="payment_date" property="paymentDate" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        payment_id, order_id, payment_amount, payment_method, payment_status, payment_date
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.Payment" useGeneratedKeys="true" keyProperty="paymentId">
+        INSERT INTO payments (order_id, payment_amount, payment_method, payment_status, payment_date)
+        VALUES (#{orderId}, #{paymentAmount}, #{paymentMethod}, #{paymentStatus}, #{paymentDate})
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM payments WHERE payment_id = #{paymentId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.Payment">
+        UPDATE payments
+        SET order_id = #{orderId},
+            payment_amount = #{paymentAmount},
+            payment_method = #{paymentMethod},
+            payment_status = #{paymentStatus},
+            payment_date = #{paymentDate}
+        WHERE payment_id = #{paymentId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM payments
+        WHERE payment_id = #{paymentId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM payments
+    </select>
+
+    <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM payments
+        WHERE order_id = #{orderId}
+    </select>
+
+</mapper>

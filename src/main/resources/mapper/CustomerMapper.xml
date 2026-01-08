@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.CustomerMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Customer">
+        <id column="customer_id" property="customerId" jdbcType="BIGINT"/>
+        <result column="first_name" property="firstName" jdbcType="VARCHAR"/>
+        <result column="last_name" property="lastName" jdbcType="VARCHAR"/>
+        <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="phone" property="phone" jdbcType="VARCHAR"/>
+        <result column="address" property="address" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        customer_id, first_name, last_name, email, phone, address, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.Customer" useGeneratedKeys="true" keyProperty="customerId">
+        INSERT INTO customers (first_name, last_name, email, phone, address, created_at, updated_at)
+        VALUES (#{firstName}, #{lastName}, #{email}, #{phone}, #{address}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM customers WHERE customer_id = #{customerId}
+    </delete>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.Customer">
+        UPDATE customers
+        SET first_name = #{firstName},
+            last_name = #{lastName},
+            email = #{email},
+            phone = #{phone},
+            address = #{address},
+            updated_at = #{updatedAt}
+        WHERE customer_id = #{customerId}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM customers
+        WHERE customer_id = #{customerId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM customers
+    </select>
+
+    <select id="selectByEmail" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM customers
+        WHERE email = #{email}
+    </select>
+
+</mapper>
