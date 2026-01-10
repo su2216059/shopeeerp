@@ -11,45 +11,26 @@ import java.util.List;
  */
 @Mapper
 public interface OzonProductStockMapper {
-    /**
-     * 插入库存明细记录
-     */
-    int insert(OzonProductStock stock);
 
     /**
-     * 批量插入库存明细记录
+     * 根据ID查询库存明细
      */
-    int batchInsert(@Param("list") List<OzonProductStock> stocks);
+    OzonProductStock selectById(@Param("id") Long id);
 
     /**
-     * 根据ID删除库存明细记录
+     * 根据商品ID查询库存明细列表
      */
-    int deleteById(Long id);
+    List<OzonProductStock> selectByProductId(@Param("productId") Long productId);
 
     /**
-     * 根据商品ID删除所有库存明细
+     * 根据SKU查询库存明细
      */
-    int deleteByProductId(Long productId);
+    List<OzonProductStock> selectBySku(@Param("sku") Long sku);
 
     /**
-     * 更新库存明细记录
+     * 根据来源查询库存明细
      */
-    int update(OzonProductStock stock);
-
-    /**
-     * 插入或更新库存明细记录
-     */
-    int insertOrUpdate(OzonProductStock stock);
-
-    /**
-     * 根据ID查询库存明细记录
-     */
-    OzonProductStock selectById(Long id);
-
-    /**
-     * 根据商品ID查询所有库存明细
-     */
-    List<OzonProductStock> selectByProductId(Long productId);
+    List<OzonProductStock> selectBySource(@Param("source") String source);
 
     /**
      * 根据商品ID和来源查询库存明细
@@ -57,7 +38,77 @@ public interface OzonProductStockMapper {
     OzonProductStock selectByProductIdAndSource(@Param("productId") Long productId, @Param("source") String source);
 
     /**
-     * 查询所有库存明细记录
+     * 查询所有库存明细
      */
     List<OzonProductStock> selectAll();
+
+    /**
+     * 根据条件查询库存明细列表
+     */
+    List<OzonProductStock> selectByCondition(OzonProductStock condition);
+
+    /**
+     * 插入库存明细
+     */
+    int insert(OzonProductStock stock);
+
+    /**
+     * 批量插入库存明细
+     */
+    int insertBatch(@Param("list") List<OzonProductStock> stocks);
+
+    /**
+     * 根据ID更新库存明细
+     */
+    int updateById(OzonProductStock stock);
+
+    /**
+     * 根据商品ID和来源更新库存明细
+     */
+    int updateByProductIdAndSource(OzonProductStock stock);
+
+    /**
+     * 根据ID删除库存明细
+     */
+    int deleteById(@Param("id") Long id);
+
+    /**
+     * 根据商品ID删除库存明细
+     */
+    int deleteByProductId(@Param("productId") Long productId);
+
+    /**
+     * 根据SKU删除库存明细
+     */
+    int deleteBySku(@Param("sku") Long sku);
+
+    /**
+     * 根据商品ID和来源删除库存明细
+     */
+    int deleteByProductIdAndSource(@Param("productId") Long productId, @Param("source") String source);
+
+    /**
+     * 批量删除库存明细
+     */
+    int deleteBatch(@Param("ids") List<Long> ids);
+
+    /**
+     * 统计库存明细数量
+     */
+    long count();
+
+    /**
+     * 根据商品ID统计库存明细数量
+     */
+    long countByProductId(@Param("productId") Long productId);
+
+    /**
+     * 计算商品总可用库存
+     */
+    int sumPresentByProductId(@Param("productId") Long productId);
+
+    /**
+     * 计算商品总预留库存
+     */
+    int sumReservedByProductId(@Param("productId") Long productId);
 }

@@ -1,28 +1,26 @@
 package com.example.shopeeerp.pojo;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
- * Ozon商品状态实体类
+ * Ozon商品状态表实体类
  */
 public class OzonProductStatus {
-    private Long id;                        // 自增主键
-    private Long productId;                 // 商品ID
-    private Boolean isCreated;              // 是否已创建
-    private String moderateStatus;          // 审核状态
-    private String status;                  // 商品状态
-    private String statusDescription;       // 状态描述
-    private String statusFailed;            // 失败状态说明
-    private String statusName;              // 状态名称
-    private String statusTooltip;           // 状态提示信息
-    private LocalDateTime statusUpdatedAt;  // 状态更新时间
-    private String validationStatus;        // 验证状态
-    private LocalDateTime createdAt;        // 创建时间
-    private LocalDateTime updatedAt;        // 更新时间
+    private Long id;
+    private Long productId;
+    private Boolean isCreated;
+    private String moderateStatus;
+    private String status;
+    private String statusDescription;
+    private String statusFailed;
+    private String statusName;
+    private String statusTooltip;
+    private Date statusUpdatedAt;
+    private String validationStatus;
+    private Date createdAt;
+    private Date updatedAt;
 
-    public OzonProductStatus() {
-    }
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -95,11 +93,11 @@ public class OzonProductStatus {
         this.statusTooltip = statusTooltip;
     }
 
-    public LocalDateTime getStatusUpdatedAt() {
+    public Date getStatusUpdatedAt() {
         return statusUpdatedAt;
     }
 
-    public void setStatusUpdatedAt(LocalDateTime statusUpdatedAt) {
+    public void setStatusUpdatedAt(Date statusUpdatedAt) {
         this.statusUpdatedAt = statusUpdatedAt;
     }
 
@@ -111,19 +109,38 @@ public class OzonProductStatus {
         this.validationStatus = validationStatus;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Date getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Date getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
+    public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "OzonProductStatus{" +
+                "id=" + id +
+                ", productId=" + productId +
+                ", isCreated=" + isCreated +
+                ", moderateStatus='" + moderateStatus + '\'' +
+                ", status='" + status + '\'' +
+                ", statusDescription='" + statusDescription + '\'' +
+                ", statusFailed='" + statusFailed + '\'' +
+                ", statusName='" + statusName + '\'' +
+                ", statusTooltip='" + statusTooltip + '\'' +
+                ", statusUpdatedAt=" + statusUpdatedAt +
+                ", validationStatus='" + validationStatus + '\'' +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
     }
 }

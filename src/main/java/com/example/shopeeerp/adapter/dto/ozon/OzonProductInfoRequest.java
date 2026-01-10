@@ -12,6 +12,7 @@ public class OzonProductInfoRequest {
     private Integer limit;
     private String last_id;
     private String sort_dir;
+    private String visibility;
 
 
 
@@ -37,6 +38,14 @@ public class OzonProductInfoRequest {
 
     public void setSort_dir(String sort_dir) {
         this.sort_dir = sort_dir;
+    }
+
+    public String getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(String visibility) {
+        this.visibility = visibility;
     }
 
     public List<String> getOffer_id() {

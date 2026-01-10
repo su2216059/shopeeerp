@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonProductMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonProduct">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="offer_id" property="offerId" jdbcType="VARCHAR"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="sku" property="sku" jdbcType="BIGINT"/>
+        <result column="description_category_id" property="descriptionCategoryId" jdbcType="INTEGER"/>
+        <result column="type_id" property="typeId" jdbcType="INTEGER"/>
+        <result column="currency_code" property="currencyCode" jdbcType="VARCHAR"/>
+        <result column="price" property="price" jdbcType="VARCHAR"/>
+        <result column="old_price" property="oldPrice" jdbcType="VARCHAR"/>
+        <result column="min_price" property="minPrice" jdbcType="VARCHAR"/>
+        <result column="vat" property="vat" jdbcType="VARCHAR"/>
+        <result column="volume_weight" property="volumeWeight" jdbcType="DECIMAL"/>
+        <result column="discounted_fbo_stocks" property="discountedFboStocks" jdbcType="INTEGER"/>
+        <result column="is_archived" property="isArchived" jdbcType="TINYINT"/>
+        <result column="is_autoarchived" property="isAutoarchived" jdbcType="TINYINT"/>
+        <result column="is_discounted" property="isDiscounted" jdbcType="TINYINT"/>
+        <result column="is_kgt" property="isKgt" jdbcType="TINYINT"/>
+        <result column="is_prepayment_allowed" property="isPrepaymentAllowed" jdbcType="TINYINT"/>
+        <result column="is_super" property="isSuper" jdbcType="TINYINT"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="sync_time" property="syncTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product WHERE id = #{id}
+    </select>
+
+    <!-- 根据offerId查询 -->
+    <select id="selectByOfferId" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product WHERE offer_id = #{offerId}
+    </select>
+
+    <!-- 根据SKU查询 -->
+    <select id="selectBySku" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product WHERE sku = #{sku}
+    </select>
+
+    <!-- 查询所有 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product ORDER BY id
+    </select>
+
+    <!-- 根据条件查询 -->
+    <select id="selectByCondition" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product
+        <where>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="offerId != null and offerId != ''">
+                AND offer_id = #{offerId}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="sku != null">
+                AND sku = #{sku}
+            </if>
+            <if test="isArchived != null">
+                AND is_archived = #{isArchived}
+            </if>
+            <if test="isDiscounted != null">
+                AND is_discounted = #{isDiscounted}
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonProduct">
+        INSERT INTO ozon_product (
+            id, offer_id, name, sku, description_category_id, type_id,
+            currency_code, price, old_price, min_price, vat, volume_weight,
+            discounted_fbo_stocks, is_archived, is_autoarchived, is_discounted,
+            is_kgt, is_prepayment_allowed, is_super, created_at, updated_at, sync_time
+        ) VALUES (
+            #{id}, #{offerId}, #{name}, #{sku}, #{descriptionCategoryId}, #{typeId},
+            #{currencyCode}, #{price}, #{oldPrice}, #{minPrice}, #{vat}, #{volumeWeight},
+            #{discountedFboStocks}, #{isArchived}, #{isAutoarchived}, #{isDiscounted},
+            #{isKgt}, #{isPrepaymentAllowed}, #{isSuper}, #{createdAt}, #{updatedAt}, #{syncTime}
+        )
+    </insert>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO ozon_product (
+            id, offer_id, name, sku, description_category_id, type_id,
+            currency_code, price, old_price, min_price, vat, volume_weight,
+            discounted_fbo_stocks, is_archived, is_autoarchived, is_discounted,
+            is_kgt, is_prepayment_allowed, is_super, created_at, updated_at, sync_time
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.id}, #{item.offerId}, #{item.name}, #{item.sku}, #{item.descriptionCategoryId}, #{item.typeId},
+                #{item.currencyCode}, #{item.price}, #{item.oldPrice}, #{item.minPrice}, #{item.vat}, #{item.volumeWeight},
+                #{item.discountedFboStocks}, #{item.isArchived}, #{item.isAutoarchived}, #{item.isDiscounted},
+                #{item.isKgt}, #{item.isPrepaymentAllowed}, #{item.isSuper}, #{item.createdAt}, #{item.updatedAt}, #{item.syncTime}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 根据ID更新 -->
+    <update id="updateById" parameterType="com.example.shopeeerp.pojo.OzonProduct">
+        UPDATE ozon_product SET
+            offer_id = #{offerId},
+            name = #{name},
+            sku = #{sku},
+            description_category_id = #{descriptionCategoryId},
+            type_id = #{typeId},
+            currency_code = #{currencyCode},
+            price = #{price},
+            old_price = #{oldPrice},
+            min_price = #{minPrice},
+            vat = #{vat},
+            volume_weight = #{volumeWeight},
+            discounted_fbo_stocks = #{discountedFboStocks},
+            is_archived = #{isArchived},
+            is_autoarchived = #{isAutoarchived},
+            is_discounted = #{isDiscounted},
+            is_kgt = #{isKgt},
+            is_prepayment_allowed = #{isPrepaymentAllowed},
+            is_super = #{isSuper},
+            updated_at = #{updatedAt},
+            sync_time = #{syncTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除 -->
+    <delete id="deleteById">
+        DELETE FROM ozon_product WHERE id = #{id}
+    </delete>
+
+    <!-- 批量删除 -->
+    <delete id="deleteBatch">
+        DELETE FROM ozon_product WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 统计数量 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM ozon_product
+    </select>
+
+    <!-- 根据条件统计数量 -->
+    <select id="countByCondition" parameterType="com.example.shopeeerp.pojo.OzonProduct" resultType="long">
+        SELECT COUNT(*) FROM ozon_product
+        <where>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="offerId != null and offerId != ''">
+                AND offer_id = #{offerId}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="sku != null">
+                AND sku = #{sku}
+            </if>
+            <if test="isArchived != null">
+                AND is_archived = #{isArchived}
+            </if>
+            <if test="isDiscounted != null">
+                AND is_discounted = #{isDiscounted}
+            </if>
+        </where>
+    </select>
+
+</mapper>

@@ -1,7 +1,7 @@
 package com.example.shopeeerp.service.impl;
 
-import com.example.shopeeerp.mapper.ProductMapper;
-import com.example.shopeeerp.pojo.Product;
+import com.example.shopeeerp.mapper.OzonProductMapper;
+import com.example.shopeeerp.pojo.OzonProduct;
 import com.example.shopeeerp.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,10 +15,10 @@ import java.util.List;
 public class ProductServiceImpl implements ProductService {
 
     @Autowired
-    private ProductMapper productMapper;
+    private OzonProductMapper productMapper;
 
     @Override
-    public int insert(Product product) {
+    public int insert(OzonProduct product) {
         return productMapper.insert(product);
     }
 
@@ -28,27 +28,24 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public int update(Product product) {
-        return productMapper.update(product);
+    public int update(OzonProduct product) {
+        return productMapper.updateById(product);
     }
 
     @Override
-    public Product selectById(Long productId) {
+    public OzonProduct selectById(Long productId) {
         return productMapper.selectById(productId);
     }
 
     @Override
-    public List<Product> selectAll() {
+    public List<OzonProduct> selectAll() {
         return productMapper.selectAll();
     }
 
     @Override
-    public Product selectBySku(String sku) {
+    public OzonProduct selectBySku(Long sku) {
         return productMapper.selectBySku(sku);
     }
 
-    @Override
-    public List<Product> selectByCategoryId(Long categoryId) {
-        return productMapper.selectByCategoryId(categoryId);
-    }
+
 }

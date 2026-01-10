@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Ozon商品详情实体类
+ * Ozon产品项实体类
  */
 public class ProductItem {
     private Long itemId;

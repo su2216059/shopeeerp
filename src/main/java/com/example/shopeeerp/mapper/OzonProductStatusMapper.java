@@ -11,48 +11,74 @@ import java.util.List;
  */
 @Mapper
 public interface OzonProductStatusMapper {
-    /**
-     * 插入状态记录
-     */
-    int insert(OzonProductStatus status);
 
     /**
-     * 根据ID删除状态记录
+     * 根据ID查询状态
      */
-    int deleteById(Long id);
+    OzonProductStatus selectById(@Param("id") Long id);
 
     /**
-     * 根据商品ID删除状态记录
+     * 根据商品ID查询状态
      */
-    int deleteByProductId(Long productId);
+    OzonProductStatus selectByProductId(@Param("productId") Long productId);
 
     /**
-     * 更新状态记录
+     * 查询所有状态
      */
-    int update(OzonProductStatus status);
+    List<OzonProductStatus> selectAll();
 
     /**
-     * 插入或更新状态记录
+     * 根据条件查询状态列表
      */
-    int insertOrUpdate(OzonProductStatus status);
+    List<OzonProductStatus> selectByCondition(OzonProductStatus condition);
 
     /**
-     * 根据ID查询状态记录
-     */
-    OzonProductStatus selectById(Long id);
-
-    /**
-     * 根据商品ID查询状态记录
-     */
-    OzonProductStatus selectByProductId(Long productId);
-
-    /**
-     * 根据状态查询记录
+     * 根据状态查询商品列表
      */
     List<OzonProductStatus> selectByStatus(@Param("status") String status);
 
     /**
-     * 查询所有状态记录
+     * 根据审核状态查询商品列表
      */
-    List<OzonProductStatus> selectAll();
+    List<OzonProductStatus> selectByModerateStatus(@Param("moderateStatus") String moderateStatus);
+
+    /**
+     * 插入状态
+     */
+    int insert(OzonProductStatus status);
+
+    /**
+     * 根据ID更新状态
+     */
+    int updateById(OzonProductStatus status);
+
+    /**
+     * 根据商品ID更新状态
+     */
+    int updateByProductId(OzonProductStatus status);
+
+    /**
+     * 根据ID删除状态
+     */
+    int deleteById(@Param("id") Long id);
+
+    /**
+     * 根据商品ID删除状态
+     */
+    int deleteByProductId(@Param("productId") Long productId);
+
+    /**
+     * 批量删除状态
+     */
+    int deleteBatch(@Param("ids") List<Long> ids);
+
+    /**
+     * 统计状态数量
+     */
+    long count();
+
+    /**
+     * 根据状态统计数量
+     */
+    long countByStatus(@Param("status") String status);
 }

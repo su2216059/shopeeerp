@@ -11,48 +11,74 @@ import java.util.List;
  */
 @Mapper
 public interface OzonProductStockSummaryMapper {
-    /**
-     * 插入库存汇总记录
-     */
-    int insert(OzonProductStockSummary stockSummary);
 
     /**
-     * 根据ID删除库存汇总记录
+     * 根据ID查询库存汇总
      */
-    int deleteById(Long id);
+    OzonProductStockSummary selectById(@Param("id") Long id);
 
     /**
-     * 根据商品ID删除库存汇总记录
+     * 根据商品ID查询库存汇总
      */
-    int deleteByProductId(Long productId);
+    OzonProductStockSummary selectByProductId(@Param("productId") Long productId);
 
     /**
-     * 更新库存汇总记录
-     */
-    int update(OzonProductStockSummary stockSummary);
-
-    /**
-     * 插入或更新库存汇总记录
-     */
-    int insertOrUpdate(OzonProductStockSummary stockSummary);
-
-    /**
-     * 根据ID查询库存汇总记录
-     */
-    OzonProductStockSummary selectById(Long id);
-
-    /**
-     * 根据商品ID查询库存汇总记录
-     */
-    OzonProductStockSummary selectByProductId(Long productId);
-
-    /**
-     * 根据是否有库存查询记录
-     */
-    List<OzonProductStockSummary> selectByHasStock(@Param("hasStock") Boolean hasStock);
-
-    /**
-     * 查询所有库存汇总记录
+     * 查询所有库存汇总
      */
     List<OzonProductStockSummary> selectAll();
+
+    /**
+     * 根据条件查询库存汇总列表
+     */
+    List<OzonProductStockSummary> selectByCondition(OzonProductStockSummary condition);
+
+    /**
+     * 查询有库存的商品
+     */
+    List<OzonProductStockSummary> selectHasStock();
+
+    /**
+     * 查询无库存的商品
+     */
+    List<OzonProductStockSummary> selectNoStock();
+
+    /**
+     * 插入库存汇总
+     */
+    int insert(OzonProductStockSummary summary);
+
+    /**
+     * 根据ID更新库存汇总
+     */
+    int updateById(OzonProductStockSummary summary);
+
+    /**
+     * 根据商品ID更新库存汇总
+     */
+    int updateByProductId(OzonProductStockSummary summary);
+
+    /**
+     * 根据ID删除库存汇总
+     */
+    int deleteById(@Param("id") Long id);
+
+    /**
+     * 根据商品ID删除库存汇总
+     */
+    int deleteByProductId(@Param("productId") Long productId);
+
+    /**
+     * 批量删除库存汇总
+     */
+    int deleteBatch(@Param("ids") List<Long> ids);
+
+    /**
+     * 统计库存汇总数量
+     */
+    long count();
+
+    /**
+     * 统计有库存商品数量
+     */
+    long countHasStock();
 }

@@ -55,6 +55,7 @@ public class OzonProductListResponse {
         private Long product_id;
         private List<Quant> quants;
 
+        // Getters and Setters
         public Boolean getArchived() {
             return archived;
         }

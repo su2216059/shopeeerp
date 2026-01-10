@@ -31,6 +31,12 @@ export const productApi = {
   getByCategoryId: (categoryId) => request.get(`/products/category/${categoryId}`),
 }
 
+// Ozon 商品同步数据
+export const ozonProductApi = {
+  list: () => request.get('/ozon/products'),
+  sync: () => request.get('/ozon/products/sync'),
+}
+
 // 订单相关API
 export const orderApi = {
   list: () => request.get('/orders'),

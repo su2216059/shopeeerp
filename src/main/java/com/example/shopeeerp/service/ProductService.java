@@ -1,6 +1,6 @@
 package com.example.shopeeerp.service;
 
-import com.example.shopeeerp.pojo.Product;
+import com.example.shopeeerp.pojo.OzonProduct;
 
 import java.util.List;
 
@@ -8,11 +8,10 @@ import java.util.List;
  * 产品服务接口
  */
 public interface ProductService {
-    int insert(Product product);
+    int insert(OzonProduct product);
     int deleteById(Long productId);
-    int update(Product product);
-    Product selectById(Long productId);
-    List<Product> selectAll();
-    Product selectBySku(String sku);
-    List<Product> selectByCategoryId(Long categoryId);
+    int update(OzonProduct product);
+    OzonProduct selectById(Long productId);
+    List<OzonProduct> selectAll();
+    OzonProduct selectBySku(Long sku);
 }

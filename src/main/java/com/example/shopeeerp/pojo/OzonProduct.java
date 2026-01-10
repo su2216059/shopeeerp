@@ -2,44 +2,36 @@ package com.example.shopeeerp.pojo;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Date;
 
 /**
  * Ozon商品主表实体类
  */
 public class OzonProduct {
-    private Long id;                        // 商品ID
-    private String offerId;                 // 商家SKU/货号
-    private String name;                    // 商品名称
-    private Long sku;                       // Ozon SKU
-    private Integer descriptionCategoryId;  // 描述分类ID
-    private Integer typeId;                 // 商品类型ID
-    private String currencyCode;            // 货币代码
-    private String price;                   // 当前价格
-    private String oldPrice;                // 原价
-    private String minPrice;                // 最低价格
-    private String vat;                     // 增值税
-    private BigDecimal volumeWeight;        // 体积重量
-    private Integer discountedFboStocks;    // 折扣FBO库存数量
-    private Boolean isArchived;             // 是否已归档
-    private Boolean isAutoarchived;         // 是否自动归档
-    private Boolean isDiscounted;           // 是否有折扣
-    private Boolean isKgt;                  // 是否为大件商品(KGT)
-    private Boolean isPrepaymentAllowed;    // 是否允许预付款
-    private Boolean isSuper;                // 是否为超级商品
-    private LocalDateTime createdAt;        // Ozon商品创建时间
-    private LocalDateTime updatedAt;        // Ozon商品更新时间
-    private LocalDateTime syncTime;         // 本地同步时间
+    private Long id;
+    private String offerId;
+    private String name;
+    private Long sku;
+    private Integer descriptionCategoryId;
+    private Integer typeId;
+    private String currencyCode;
+    private BigDecimal price;
+    private BigDecimal oldPrice;
+    private String minPrice;
+    private String vat;
+    private BigDecimal volumeWeight;
+    private Integer discountedFboStocks;
+    private Boolean isArchived;
+    private Boolean isAutoarchived;
+    private Boolean isDiscounted;
+    private Boolean isKgt;
+    private Boolean isPrepaymentAllowed;
+    private Boolean isSuper;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime syncTime;
 
-    // 关联对象
-    private List<OzonProductImage> images;          // 商品图片列表
-    private OzonProductStatus status;               // 商品状态
-    private OzonProductStockSummary stockSummary;   // 库存汇总
-    private List<OzonProductStock> stocks;          // 库存明细列表
-
-    public OzonProduct() {
-    }
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -96,19 +88,19 @@ public class OzonProduct {
         this.currencyCode = currencyCode;
     }
 
-    public String getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(String price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 
-    public String getOldPrice() {
+    public BigDecimal getOldPrice() {
         return oldPrice;
     }
 
-    public void setOldPrice(String oldPrice) {
+    public void setOldPrice(BigDecimal oldPrice) {
         this.oldPrice = oldPrice;
     }
 
@@ -216,35 +208,31 @@ public class OzonProduct {
         this.syncTime = syncTime;
     }
 
-    public List<OzonProductImage> getImages() {
-        return images;
-    }
-
-    public void setImages(List<OzonProductImage> images) {
-        this.images = images;
-    }
-
-    public OzonProductStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(OzonProductStatus status) {
-        this.status = status;
-    }
-
-    public OzonProductStockSummary getStockSummary() {
-        return stockSummary;
-    }
-
-    public void setStockSummary(OzonProductStockSummary stockSummary) {
-        this.stockSummary = stockSummary;
-    }
-
-    public List<OzonProductStock> getStocks() {
-        return stocks;
-    }
-
-    public void setStocks(List<OzonProductStock> stocks) {
-        this.stocks = stocks;
+    @Override
+    public String toString() {
+        return "OzonProduct{" +
+                "id=" + id +
+                ", offerId='" + offerId + '\'' +
+                ", name='" + name + '\'' +
+                ", sku=" + sku +
+                ", descriptionCategoryId=" + descriptionCategoryId +
+                ", typeId=" + typeId +
+                ", currencyCode='" + currencyCode + '\'' +
+                ", price='" + price + '\'' +
+                ", oldPrice='" + oldPrice + '\'' +
+                ", minPrice='" + minPrice + '\'' +
+                ", vat='" + vat + '\'' +
+                ", volumeWeight=" + volumeWeight +
+                ", discountedFboStocks=" + discountedFboStocks +
+                ", isArchived=" + isArchived +
+                ", isAutoarchived=" + isAutoarchived +
+                ", isDiscounted=" + isDiscounted +
+                ", isKgt=" + isKgt +
+                ", isPrepaymentAllowed=" + isPrepaymentAllowed +
+                ", isSuper=" + isSuper +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", syncTime=" + syncTime +
+                '}';
     }
 }

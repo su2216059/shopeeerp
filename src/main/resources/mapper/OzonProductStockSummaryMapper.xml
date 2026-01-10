@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonProductStockSummaryMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonProductStockSummary">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="has_stock" property="hasStock" jdbcType="TINYINT"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_stock_summary WHERE id = #{id}
+    </select>
+
+    <!-- 根据商品ID查询 -->
+    <select id="selectByProductId" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_stock_summary WHERE product_id = #{productId}
+    </select>
+
+    <!-- 查询所有 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_stock_summary ORDER BY id
+    </select>
+
+    <!-- 根据条件查询 -->
+    <select id="selectByCondition" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_stock_summary
+        <where>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="productId != null">
+                AND product_id = #{productId}
+            </if>
+            <if test="hasStock != null">
+                AND has_stock = #{hasStock}
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <!-- 查询有库存的商品 -->
+    <select id="selectHasStock" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_stock_summary WHERE has_stock = 1 ORDER BY id
+    </select>
+
+    <!-- 查询无库存的商品 -->
+    <select id="selectNoStock" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_stock_summary WHERE has_stock = 0 ORDER BY id
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonProductStockSummary">
+        INSERT INTO ozon_product_stock_summary (
+            product_id, has_stock, created_at, updated_at
+        ) VALUES (
+            #{productId}, #{hasStock}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- 根据ID更新 -->
+    <update id="updateById" parameterType="com.example.shopeeerp.pojo.OzonProductStockSummary">
+        UPDATE ozon_product_stock_summary SET
+            has_stock = #{hasStock},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据商品ID更新 -->
+    <update id="updateByProductId" parameterType="com.example.shopeeerp.pojo.OzonProductStockSummary">
+        UPDATE ozon_product_stock_summary SET
+            has_stock = #{hasStock},
+            updated_at = #{updatedAt}
+        WHERE product_id = #{productId}
+    </update>
+
+    <!-- 根据ID删除 -->
+    <delete id="deleteById">
+        DELETE FROM ozon_product_stock_summary WHERE id = #{id}
+    </delete>
+
+    <!-- 根据商品ID删除 -->
+    <delete id="deleteByProductId">
+        DELETE FROM ozon_product_stock_summary WHERE product_id = #{productId}
+    </delete>
+
+    <!-- 批量删除 -->
+    <delete id="deleteBatch">
+        DELETE FROM ozon_product_stock_summary WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 统计数量 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM ozon_product_stock_summary
+    </select>
+
+    <!-- 统计有库存商品数量 -->
+    <select id="countHasStock" resultType="long">
+        SELECT COUNT(*) FROM ozon_product_stock_summary WHERE has_stock = 1
+    </select>
+
+</mapper>

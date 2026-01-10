@@ -1,21 +1,19 @@
 package com.example.shopeeerp.pojo;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
- * Ozon商品图片实体类
+ * Ozon商品图片表实体类
  */
 public class OzonProductImage {
-    private Long id;                // 自增主键
-    private Long productId;         // 商品ID
-    private String imageUrl;        // 图片URL
-    private Integer sortOrder;      // 排序顺序
-    private Boolean isPrimary;      // 是否为主图
-    private LocalDateTime createdAt; // 创建时间
+    private Long id;
+    private Long productId;
+    private String imageUrl;
+    private Integer sortOrder;
+    private Boolean isPrimary;
+    private Date createdAt;
 
-    public OzonProductImage() {
-    }
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -56,11 +54,23 @@ public class OzonProductImage {
         this.isPrimary = isPrimary;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Date getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
+    }
+
+    @Override
+    public String toString() {
+        return "OzonProductImage{" +
+                "id=" + id +
+                ", productId=" + productId +
+                ", imageUrl='" + imageUrl + '\'' +
+                ", sortOrder=" + sortOrder +
+                ", isPrimary=" + isPrimary +
+                ", createdAt=" + createdAt +
+                '}';
     }
 }

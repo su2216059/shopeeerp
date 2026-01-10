@@ -1,23 +1,21 @@
 package com.example.shopeeerp.pojo;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
- * Ozon商品库存明细实体类
+ * Ozon商品库存明细表实体类
  */
 public class OzonProductStock {
-    private Long id;                // 自增主键
-    private Long productId;         // 商品ID
-    private Long sku;               // 库存SKU
-    private String source;          // 库存来源/仓库
-    private Integer present;        // 可用库存数量
-    private Integer reserved;       // 预留库存数量
-    private LocalDateTime createdAt; // 创建时间
-    private LocalDateTime updatedAt; // 更新时间
+    private Long id;
+    private Long productId;
+    private Long sku;
+    private String source;
+    private Integer present;
+    private Integer reserved;
+    private Date createdAt;
+    private Date updatedAt;
 
-    public OzonProductStock() {
-    }
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -66,19 +64,33 @@ public class OzonProductStock {
         this.reserved = reserved;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Date getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Date getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
+    public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "OzonProductStock{" +
+                "id=" + id +
+                ", productId=" + productId +
+                ", sku=" + sku +
+                ", source='" + source + '\'' +
+                ", present=" + present +
+                ", reserved=" + reserved +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
     }
 }

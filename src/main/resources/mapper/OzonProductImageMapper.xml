@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonProductImageMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonProductImage">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="image_url" property="imageUrl" jdbcType="VARCHAR"/>
+        <result column="sort_order" property="sortOrder" jdbcType="INTEGER"/>
+        <result column="is_primary" property="isPrimary" jdbcType="TINYINT"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_image WHERE id = #{id}
+    </select>
+
+    <!-- 根据商品ID查询 -->
+    <select id="selectByProductId" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_image WHERE product_id = #{productId} ORDER BY sort_order, id
+    </select>
+
+    <!-- 查询所有 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_image ORDER BY product_id, sort_order, id
+    </select>
+
+    <!-- 根据条件查询 -->
+    <select id="selectByCondition" resultMap="BaseResultMap">
+        SELECT * FROM ozon_product_image
+        <where>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="productId != null">
+                AND product_id = #{productId}
+            </if>
+            <if test="imageUrl != null and imageUrl != ''">
+                AND image_url = #{imageUrl}
+            </if>
+            <if test="isPrimary != null">
+                AND is_primary = #{isPrimary}
+            </if>
+        </where>
+        ORDER BY product_id, sort_order, id
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonProductImage">
+        INSERT INTO ozon_product_image (
+            product_id, image_url, sort_order, is_primary, created_at
+        ) VALUES (
+            #{productId}, #{imageUrl}, #{sortOrder}, #{isPrimary}, #{createdAt}
+        )
+    </insert>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO ozon_product_image (
+            product_id, image_url, sort_order, is_primary, created_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.productId}, #{item.imageUrl}, #{item.sortOrder}, #{item.isPrimary}, #{item.createdAt})
+        </foreach>
+    </insert>
+
+    <!-- 根据ID更新 -->
+    <update id="updateById" parameterType="com.example.shopeeerp.pojo.OzonProductImage">
+        UPDATE ozon_product_image SET
+            product_id = #{productId},
+            image_url = #{imageUrl},
+            sort_order = #{sortOrder},
+            is_primary = #{isPrimary}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除 -->
+    <delete id="deleteById">
+        DELETE FROM ozon_product_image WHERE id = #{id}
+    </delete>
+
+    <!-- 根据商品ID删除 -->
+    <delete id="deleteByProductId">
+        DELETE FROM ozon_product_image WHERE product_id = #{productId}
+    </delete>
+
+    <!-- 批量删除 -->
+    <delete id="deleteBatch">
+        DELETE FROM ozon_product_image WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 统计数量 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM ozon_product_image
+    </select>
+
+    <!-- 根据商品ID统计数量 -->
+    <select id="countByProductId" resultType="long">
+        SELECT COUNT(*) FROM ozon_product_image WHERE product_id = #{productId}
+    </select>
+
+</mapper>

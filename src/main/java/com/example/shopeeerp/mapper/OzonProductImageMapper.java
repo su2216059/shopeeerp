@@ -11,43 +11,64 @@ import java.util.List;
  */
 @Mapper
 public interface OzonProductImageMapper {
+
     /**
-     * 插入图片记录
+     * 根据ID查询图片
+     */
+    OzonProductImage selectById(@Param("id") Long id);
+
+    /**
+     * 根据商品ID查询图片列表
+     */
+    List<OzonProductImage> selectByProductId(@Param("productId") Long productId);
+
+    /**
+     * 查询所有图片
+     */
+    List<OzonProductImage> selectAll();
+
+    /**
+     * 根据条件查询图片列表
+     */
+    List<OzonProductImage> selectByCondition(OzonProductImage condition);
+
+    /**
+     * 插入图片
      */
     int insert(OzonProductImage image);
 
     /**
-     * 批量插入图片记录
+     * 批量插入图片
      */
-    int batchInsert(@Param("list") List<OzonProductImage> images);
+    int insertBatch(@Param("list") List<OzonProductImage> images);
 
     /**
-     * 根据ID删除图片记录
+     * 根据ID更新图片
      */
-    int deleteById(Long id);
+    int updateById(OzonProductImage image);
 
     /**
-     * 根据商品ID删除所有图片
+     * 根据ID删除图片
      */
-    int deleteByProductId(Long productId);
+    int deleteById(@Param("id") Long id);
 
     /**
-     * 更新图片记录
+     * 根据商品ID删除图片
      */
-    int update(OzonProductImage image);
+    int deleteByProductId(@Param("productId") Long productId);
 
     /**
-     * 根据ID查询图片记录
+     * 批量删除图片
      */
-    OzonProductImage selectById(Long id);
+    int deleteBatch(@Param("ids") List<Long> ids);
 
     /**
-     * 根据商品ID查询所有图片
+     * 统计图片数量
      */
-    List<OzonProductImage> selectByProductId(Long productId);
+    long count();
 
     /**
-     * 查询所有图片记录
+     * 根据商品ID统计图片数量
      */
-    List<OzonProductImage> selectAll();
+    long countByProductId(@Param("productId") Long productId);
 }

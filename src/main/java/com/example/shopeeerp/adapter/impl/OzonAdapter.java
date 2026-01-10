@@ -8,112 +8,128 @@ import com.example.shopeeerp.adapter.dto.ozon.OzonProductListResponse;
 import com.example.shopeeerp.adapter.model.PlatformCost;
 import com.example.shopeeerp.adapter.model.PlatformOrder;
 import com.example.shopeeerp.adapter.model.PlatformProduct;
-import com.example.shopeeerp.pojo.Product;
-import com.example.shopeeerp.pojo.ProductItem;
-import com.example.shopeeerp.service.ProductItemService;
-import com.example.shopeeerp.service.ProductService;
+import com.example.shopeeerp.pojo.OzonProduct;
+import com.example.shopeeerp.pojo.OzonProductStatus;
+import com.example.shopeeerp.service.OzonProductImageService;
+import com.example.shopeeerp.service.OzonProductService;
+import com.example.shopeeerp.service.OzonProductStatusService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Ozon平台适配器实现
+ * Ozon 平台适配器
  */
 @Component
 public class OzonAdapter implements PlatformAdapter {
-    
+
     private static final String OZON_API_BASE_URL = "https://api-seller.ozon.ru";
     private static final String PRODUCT_LIST_URL = OZON_API_BASE_URL + "/v3/product/list";
     private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
-    
+
     private final RestTemplate restTemplate;
-    
-    @Autowired(required = false)
-    private ProductService productService;
-    
-    @Autowired(required = false)
-    private ProductItemService productItemService;
-    
+    private final OzonProductService ozonProductService;
+    private final OzonProductImageService ozonProductImageService;
+    private final OzonProductStatusService ozonProductStatusService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     @Value("${ozon.api.client-id:}")
     private String clientId;
-    
+
     @Value("${ozon.api.api-key:}")
     private String apiKey;
-    
-    public OzonAdapter() {
-        this.restTemplate = new RestTemplate();
+
+    @Autowired
+    public OzonAdapter(RestTemplate restTemplate,
+                       @Autowired(required = false) OzonProductService ozonProductService,
+                       @Autowired(required = false) OzonProductImageService ozonProductImageService,
+                       @Autowired(required = false) OzonProductStatusService ozonProductStatusService) {
+        this.restTemplate = restTemplate != null ? restTemplate : new RestTemplate();
+        this.ozonProductService = ozonProductService;
+        this.ozonProductImageService = ozonProductImageService;
+        this.ozonProductStatusService = ozonProductStatusService;
     }
-    
-    // 用于测试的构造函数
-    public OzonAdapter(RestTemplate restTemplate, String clientId, String apiKey) {
-        this.restTemplate = restTemplate;
-        this.clientId = clientId;
-        this.apiKey = apiKey;
-    }
-    
-    // 用于测试的构造函数（包含ProductService）
-    public OzonAdapter(RestTemplate restTemplate, String clientId, String apiKey, ProductService productService) {
-        this.restTemplate = restTemplate;
-        this.clientId = clientId;
-        this.apiKey = apiKey;
-        this.productService = productService;
-    }
-    
-    // 用于测试的构造函数（包含ProductService和ProductItemService）
-    public OzonAdapter(RestTemplate restTemplate, String clientId, String apiKey, 
-                       ProductService productService, ProductItemService productItemService) {
-        this.restTemplate = restTemplate;
-        this.clientId = clientId;
-        this.apiKey = apiKey;
-        this.productService = productService;
-        this.productItemService = productItemService;
-    }
-    
+
     @Override
     public String getPlatformName() {
         return "Ozon";
     }
-    
+
     @Override
     public List<PlatformOrder> fetchOrders(String startDate, String endDate) {
-        // TODO: 实现Ozon API调用
-        // 这里应该调用Ozon的API来获取订单数据
-        // 参考Ozon API文档：https://docs.ozon.ru/api/seller/
+        // TODO 调用 Ozon 订单 API
         List<PlatformOrder> orders = new ArrayList<>();
-        
-        // 示例订单
         PlatformOrder order = new PlatformOrder();
         order.setPlatformOrderId("OZ345678");
         order.setCustomerId("C003");
-        order.setCustomerName("示例客户3");
-        order.setStatus("待处理");
+        order.setCustomerName("Demo Customer 3");
+        order.setStatus("PENDING");
         order.setTotalAmount(new BigDecimal("299.99"));
-        order.setPaymentStatus("已支付");
-        order.setShippingStatus("待发货");
+        order.setPaymentStatus("PAID");
+        order.setShippingStatus("PENDING_SHIPMENT");
         order.setOrderDate(LocalDateTime.now());
-        
         orders.add(order);
-        
         return orders;
     }
-    
+
     @Override
     public List<PlatformProduct> fetchProducts() {
         try {
-            // 构建请求对象
+            List<OzonProductListResponse.Item> productListItems = fetchProductList();
+            if (productListItems == null || productListItems.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<String> productIds = productListItems.stream()
+                    .map(item -> String.valueOf(item.getProduct_id()))
+                    .filter(id -> id != null && !id.trim().isEmpty())
+                    .collect(Collectors.toList());
+
+            if (productIds.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<OzonProductInfoResponse.ProductInfo> productDetails = fetchProductDetails(productIds);
+
+            List<PlatformProduct> platformProducts = productListItems.stream()
+                    .map(this::convertToPlatformProduct)
+                    .collect(Collectors.toList());
+
+            if (productDetails != null && !productDetails.isEmpty()) {
+                syncProductDetailsToDatabase(productDetails);
+            }
+
+            return platformProducts;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 获取商品列表
+     */
+    private List<OzonProductListResponse.Item> fetchProductList() {
+        try {
             OzonProductListRequest request = new OzonProductListRequest();
             OzonProductListRequest.Filter filter = new OzonProductListRequest.Filter();
             filter.setOffer_id(Collections.emptyList());
@@ -121,67 +137,168 @@ public class OzonAdapter implements PlatformAdapter {
             filter.setVisibility("ALL");
             request.setFilter(filter);
             request.setLast_id("");
-            request.setLimit(100);
-            
-            // 设置请求头
+            request.setLimit(1000);
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Client-Id", clientId);
             headers.set("Api-Key", apiKey);
-            
+
             HttpEntity<OzonProductListRequest> entity = new HttpEntity<>(request, headers);
-            
-            // 发送请求
+
             ResponseEntity<OzonProductListResponse> response = restTemplate.exchange(
                     PRODUCT_LIST_URL,
                     HttpMethod.POST,
                     entity,
                     OzonProductListResponse.class
             );
-            
-            // 转换响应数据
-            OzonProductListResponse responseBody = response.getBody();
-            if (response.getStatusCode() == HttpStatus.OK && responseBody != null) {
-                OzonProductListResponse.Result result = responseBody.getResult();
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                OzonProductListResponse.Result result = response.getBody().getResult();
                 if (result != null && result.getItems() != null) {
-                    List<PlatformProduct> platformProducts = result.getItems().stream()
-                            .map(this::convertToPlatformProduct)
-                            .collect(Collectors.toList());
-                    
-                    // 同步商品数据到数据库
-                    syncProductsToDatabase(platformProducts);
-                    
-                    // 获取商品详情并存入数据库
-                    fetchAndSaveProductDetails(platformProducts);
-                    
-                    return platformProducts;
+                    return result.getItems();
                 }
             }
-            
+
             return new ArrayList<>();
         } catch (Exception e) {
-            // 如果API调用失败，返回空列表或记录日志
-            // 在实际生产环境中，应该记录详细的错误日志
             e.printStackTrace();
             return new ArrayList<>();
         }
     }
-    
+
     /**
-     * 将Ozon商品数据转换为PlatformProduct
+     * 批量获取商品详情
+     */
+    private List<OzonProductInfoResponse.ProductInfo> fetchProductDetails(List<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<OzonProductInfoResponse.ProductInfo> allProductDetails = new ArrayList<>();
+
+        // 每批最多 1000
+        int batchSize = 1000;
+        for (int i = 0; i < productIds.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, productIds.size());
+            List<String> batch = productIds.subList(i, end);
+
+            try {
+                List<OzonProductInfoResponse.ProductInfo> batchDetails = fetchProductInfo(batch);
+                if (batchDetails != null) {
+                    allProductDetails.addAll(batchDetails);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return allProductDetails;
+    }
+
+    /**
+     * 获取商品详情信息（默认 ALL，可见性可选，limit 最大 1000）
+     * 可选 visibility：ALL / VISIBLE / TO_SUPPLY / IN_SALE / ARCHIVED
+     */
+    public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(List<String> productIds) {
+        return fetchProductInfo(productIds, "ALL", 1000, null, "ASC");
+    }
+
+    /**
+     * 获取商品详情信息（完整参数）
+     */
+    public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(
+            List<String> productIds,
+            String visibility,
+            Integer limit,
+            String lastId,
+            String sortDir) {
+        try {
+            OzonProductInfoRequest request = new OzonProductInfoRequest();
+            request.setProduct_id(productIds);
+            request.setVisibility(visibility != null ? visibility : "ALL");
+            int pageSize = (limit != null && limit > 0) ? Math.min(limit, 1000) : 1000;
+            request.setLimit(pageSize);
+            request.setLast_id(lastId != null ? lastId : "");
+            request.setSort_dir(sortDir != null ? sortDir : "ASC");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Client-Id", clientId);
+            headers.set("Api-Key", apiKey);
+
+            HttpEntity<OzonProductInfoRequest> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<OzonProductInfoResponse> response = restTemplate.exchange(
+                    PRODUCT_INFO_URL,
+                    HttpMethod.POST,
+                    entity,
+                    OzonProductInfoResponse.class
+            );
+
+            OzonProductInfoResponse responseBody = response.getBody();
+            if (response.getStatusCode() == HttpStatus.OK && responseBody != null) {
+                List<OzonProductInfoResponse.ProductInfo> result = responseBody.getResult();
+                if (result != null) {
+                    return result;
+                }
+            }
+
+            return new ArrayList<>();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 同步商品详情到数据库
+     */
+    private void syncProductDetailsToDatabase(List<OzonProductInfoResponse.ProductInfo> productDetails) {
+        if (ozonProductService == null || productDetails == null || productDetails.isEmpty()) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (OzonProductInfoResponse.ProductInfo productInfo : productDetails) {
+            try {
+                OzonProduct existingItem = ozonProductService.getById(productInfo.getId());
+
+                OzonProduct productItem = convertToProductItem(productInfo);
+
+                if (existingItem != null) {
+                    productItem.setId(existingItem.getId());
+                    productItem.setCreatedAt(existingItem.getCreatedAt());
+                    productItem.setUpdatedAt(now);
+                    ozonProductService.update(productItem);
+                } else {
+                    productItem.setCreatedAt(now);
+                    productItem.setUpdatedAt(now);
+                    ozonProductService.save(productItem);
+                }
+
+                syncProductImages(productInfo);
+                syncProductStatus(productInfo, now);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 将 Ozon 商品数据转换为 PlatformProduct
      */
     private PlatformProduct convertToPlatformProduct(OzonProductListResponse.Item item) {
         PlatformProduct product = new PlatformProduct();
         product.setProductId(String.valueOf(item.getProduct_id()));
         product.setSku(item.getOffer_id());
-        // 注意：Ozon API的product/list接口返回的数据中没有name、price等信息
-        // 这些信息需要通过其他API获取（如/product/info）
         product.setName(item.getOffer_id() != null ? "商品-" + item.getOffer_id() : "未知商品");
-        product.setPrice(BigDecimal.ZERO); // 需要通过其他API获取价格
+        product.setPrice(BigDecimal.ZERO);
         product.setStock(calculateStock(item.getQuants()));
         return product;
     }
-    
+
     /**
      * 计算库存总数
      */
@@ -193,270 +310,208 @@ public class OzonAdapter implements PlatformAdapter {
                 .mapToInt(quant -> quant.getQuant_size() != null ? quant.getQuant_size() : 0)
                 .sum();
     }
-    
+
     /**
-     * 将平台商品同步到数据库
+     * 将商品详情转为实体
      */
-    private void syncProductsToDatabase(List<PlatformProduct> platformProducts) {
-        if (productService == null || platformProducts == null || platformProducts.isEmpty()) {
-            return;
-        }
-        
-        LocalDateTime now = LocalDateTime.now();
-        
-        for (PlatformProduct platformProduct : platformProducts) {
-            try {
-                // 跳过SKU为空的商品
-                if (platformProduct.getSku() == null || platformProduct.getSku().trim().isEmpty()) {
-                    continue;
-                }
-                
-                Product product = convertToProduct(platformProduct);
-                
-                // 如果productId不为空，先根据productId查询
-                Product existingProduct = null;
-                if (product.getProductId() != null) {
-                    existingProduct = productService.selectById(product.getProductId());
-                }
-                
-                // 如果根据productId没找到，再根据SKU查询
-                if (existingProduct == null) {
-                    existingProduct = productService.selectBySku(platformProduct.getSku());
-                }
-                
-                if (existingProduct != null) {
-                    // 更新已存在的商品
-                    product.setProductId(existingProduct.getProductId());
-                    product.setCreatedAt(existingProduct.getCreatedAt()); // 保留原始创建时间
-                    product.setUpdatedAt(now);
-                    productService.update(product);
-                } else {
-                    // 插入新商品，使用返回的productId（如果存在）
-                    product.setCreatedAt(now);
-                    product.setUpdatedAt(now);
-                    productService.insert(product);
-                }
-            } catch (Exception e) {
-                // 记录错误但继续处理其他商品
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    /**
-     * 将PlatformProduct转换为Product
-     */
-    private Product convertToProduct(PlatformProduct platformProduct) {
-        Product product = new Product();
-        product.setSku(platformProduct.getSku());
-        // 确保name不为空，如果为空则使用SKU作为名称
-        String name = platformProduct.getName();
-        if (name == null || name.trim().isEmpty()) {
-            name = platformProduct.getSku() != null ? "商品-" + platformProduct.getSku() : "未知商品";
-        }
-        product.setName(name);
-        product.setDescription(platformProduct.getDescription());
-        product.setPrice(platformProduct.getPrice() != null ? platformProduct.getPrice() : BigDecimal.ZERO);
-        if(Strings.isNotEmpty(platformProduct.getProductId())){
-            product.setProductId(Long.valueOf(platformProduct.getProductId()));
-        }
-        // categoryId 暂时设为null，后续可以根据需要设置
-        product.setCategoryId(null);
-        return product;
-    }
-    
-    /**
-     * 获取商品详情信息
-     * @param productIds 商品ID列表
-     * @return 商品详情列表
-     */
-    public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(List<String> productIds) {
-        return fetchProductInfo(productIds, "ALL", 100, null, "ASC");
-    }
-    
-    /**
-     * 获取商品详情信息（完整参数）
-     * @param productIds 商品ID列表
-     * @param visibility 可见性（ALL/VISIBLE/INVISIBLE）
-     * @param limit 每页数量
-     * @param lastId 上一页的last_id
-     * @param sortDir 排序方向（ASC/DESC）
-     * @return 商品详情列表
-     */
-    public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(
-            List<String> productIds, 
-            String visibility, 
-            Integer limit, 
-            String lastId, 
-            String sortDir) {
-        try {
-            // 构建请求对象
-            OzonProductInfoRequest request = new OzonProductInfoRequest();
-            request.setProduct_id(productIds);
-            request.setLimit(limit != null ? limit : 100);
-            request.setLast_id(lastId != null ? lastId : "");
-            request.setSort_dir(sortDir != null ? sortDir : "ASC");
-            
-            // 设置请求头
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Client-Id", clientId);
-            headers.set("Api-Key", apiKey);
-            
-            HttpEntity<OzonProductInfoRequest> entity = new HttpEntity<>(request, headers);
-            
-            // 发送请求
-            ResponseEntity<OzonProductInfoResponse> response = restTemplate.exchange(
-                    PRODUCT_INFO_URL,
-                    HttpMethod.POST,
-                    entity,
-                    OzonProductInfoResponse.class
-            );
-            
-            // 转换响应数据
-            OzonProductInfoResponse responseBody = response.getBody();
-            if (response.getStatusCode() == HttpStatus.OK && responseBody != null) {
-                List<OzonProductInfoResponse.ProductInfo> result = responseBody.getResult();
-                if (result != null) {
-                    return result;
-                }
-            }
-            
-            return new ArrayList<>();
-        } catch (Exception e) {
-            // 如果API调用失败，返回空列表或记录日志
-            // 在实际生产环境中，应该记录详细的错误日志
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
-    }
-    
-    /**
-     * 获取商品详情并存入数据库
-     */
-    private void fetchAndSaveProductDetails(List<PlatformProduct> platformProducts) {
-        if (productItemService == null || platformProducts == null || platformProducts.isEmpty()) {
-            return;
-        }
-        
-        try {
-            // 提取商品ID列表
-            List<String> productIds = platformProducts.stream()
-                    .map(PlatformProduct::getProductId)
-                    .filter(id -> id != null && !id.trim().isEmpty())
-                    .collect(Collectors.toList());
-            
-            if (productIds.isEmpty()) {
-                return;
-            }
-            
-            // 分批获取商品详情（每次最多100个）
-            int batchSize = 100;
-            for (int i = 0; i < productIds.size(); i += batchSize) {
-                int end = Math.min(i + batchSize, productIds.size());
-                List<String> batch = productIds.subList(i, end);
-                
-                // 获取商品详情
-                List<OzonProductInfoResponse.ProductInfo> productInfos = fetchProductInfo(batch);
-                
-                // 保存到数据库
-                syncProductItemsToDatabase(productInfos);
-            }
-        } catch (Exception e) {
-            // 记录错误但继续处理
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * 将商品详情同步到数据库
-     */
-    private void syncProductItemsToDatabase(List<OzonProductInfoResponse.ProductInfo> productInfos) {
-        if (productItemService == null || productInfos == null || productInfos.isEmpty()) {
-            return;
-        }
-        
-        LocalDateTime now = LocalDateTime.now();
-        
-        for (OzonProductInfoResponse.ProductInfo productInfo : productInfos) {
-            try {
-                // 根据Ozon ID查询是否已存在
-                ProductItem existingItem = productItemService.selectByOzonId(productInfo.getId());
-                
-                ProductItem productItem = convertToProductItem(productInfo);
-                
-                if (existingItem != null) {
-                    // 更新已存在的商品详情
-                    productItem.setItemId(existingItem.getItemId());
-                    productItem.setCreatedAt(existingItem.getCreatedAt()); // 保留原始创建时间
-                    productItem.setUpdatedAt(now);
-                    productItemService.update(productItem);
-                } else {
-                    // 插入新商品详情
-                    productItem.setCreatedAt(now);
-                    productItem.setUpdatedAt(now);
-                    productItemService.insert(productItem);
-                }
-            } catch (Exception e) {
-                // 记录错误但继续处理其他商品
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    /**
-     * 将OzonProductInfoResponse.ProductInfo转换为ProductItem
-     */
-    private ProductItem convertToProductItem(OzonProductInfoResponse.ProductInfo productInfo) {
-        ProductItem productItem = new ProductItem();
-        
-        // 基本信息
-        productItem.setOzonId(productInfo.getId());
+    private OzonProduct convertToProductItem(OzonProductInfoResponse.ProductInfo productInfo) {
+        OzonProduct productItem = new OzonProduct();
+
+        productItem.setId(productInfo.getId());
         productItem.setOfferId(productInfo.getOffer_id());
         productItem.setName(productInfo.getName());
-        productItem.setDescriptionCategoryId(productInfo.getDescription_category_id());
-        productItem.setTypeId(productInfo.getType_id()); //
-        // 体积重量（根据height, depth, width, weight计算或直接使用weight）
+
         if (productInfo.getVolume_weight() != null) {
             productItem.setVolumeWeight(BigDecimal.valueOf(productInfo.getVolume_weight()));
+        } else {
+            productItem.setVolumeWeight(BigDecimal.ZERO);
         }
-        
-        // JSON字段序列化
-        try {
-            if (productInfo.getImages() != null && !productInfo.getImages().isEmpty()) {
-                productItem.setImages(objectMapper.writeValueAsString(productInfo.getImages()));
-                // 设置主图（第一个图片）
-                if (productInfo.getImages().get(0) != null) {
-                    productItem.setPrimaryImage(objectMapper.writeValueAsString(
-                        java.util.Collections.singletonList(productInfo.getImages().get(0))
-                    ));
-                }
+
+        productItem.setSku(productInfo.getSku());
+
+        if (productInfo.getPrice() != null && !productInfo.getPrice().trim().isEmpty()) {
+            try {
+                productItem.setPrice(new BigDecimal(productInfo.getPrice().trim()));
+            } catch (NumberFormatException e) {
+                productItem.setPrice(BigDecimal.ZERO);
             }
-
-
-        } catch (Exception e) {
-            // JSON序列化失败时记录错误但继续处理
-            e.printStackTrace();
+        } else {
+            productItem.setPrice(BigDecimal.ZERO);
         }
-        
-        // 其他字段
-        productItem.setColorImage(productInfo.getColor_image().toString());
-        
+
+        if (productInfo.getOld_price() != null && !productInfo.getOld_price().trim().isEmpty()) {
+            try {
+                productItem.setOldPrice(new BigDecimal(productInfo.getOld_price().trim()));
+            } catch (NumberFormatException e) {
+                productItem.setOldPrice(null);
+            }
+        } else {
+            productItem.setOldPrice(null);
+        }
+
+        productItem.setMinPrice(productInfo.getMin_price());
+        productItem.setVat(productInfo.getVat());
+        productItem.setCurrencyCode(productInfo.getCurrency_code());
+
+        if (productInfo.getDescription_category_id() != null) {
+            productItem.setDescriptionCategoryId(productInfo.getDescription_category_id().intValue());
+        }
+
+        if (productInfo.getType_id() != null) {
+            productItem.setTypeId(productInfo.getType_id().intValue());
+        }
+
+        productItem.setIsArchived(productInfo.getIs_archived() != null ? productInfo.getIs_archived() : false);
+        productItem.setIsAutoarchived(productInfo.getIs_autoarchived() != null ? productInfo.getIs_autoarchived() : false);
+        productItem.setIsDiscounted(productInfo.getIs_discounted() != null ? productInfo.getIs_discounted() : false);
+        productItem.setIsKgt(productInfo.getIs_kgt() != null ? productInfo.getIs_kgt() : false);
+        productItem.setIsPrepaymentAllowed(productInfo.getIs_prepayment_allowed() != null ? productInfo.getIs_prepayment_allowed() : true);
+        productItem.setIsSuper(productInfo.getIs_super() != null ? productInfo.getIs_super() : false);
+        productItem.setDiscountedFboStocks(productInfo.getDiscounted_fbo_stocks() != null ? productInfo.getDiscounted_fbo_stocks() : 0);
+
+        if (productInfo.getCreated_at() != null && !productInfo.getCreated_at().trim().isEmpty()) {
+            try {
+                productItem.setCreatedAt(LocalDateTime.parse(productInfo.getCreated_at().trim(), DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+            } catch (Exception e) {
+                productItem.setCreatedAt(null);
+            }
+        }
+
+        if (productInfo.getUpdated_at() != null && !productInfo.getUpdated_at().trim().isEmpty()) {
+            try {
+                productItem.setUpdatedAt(LocalDateTime.parse(productInfo.getUpdated_at().trim(), DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+            } catch (Exception e) {
+                productItem.setUpdatedAt(null);
+            }
+        }
+
+        productItem.setSyncTime(LocalDateTime.now());
         return productItem;
     }
-    
+
+    /**
+     * 同步商品图片
+     */
+    private void syncProductImages(OzonProductInfoResponse.ProductInfo productInfo) {
+        if (ozonProductImageService == null || productInfo == null || productInfo.getId() == null) {
+            return;
+        }
+        Long productId = productInfo.getId();
+        List<String> images = productInfo.getImages();
+        List<String> colorImages = productInfo.getColor_image();
+
+        List<com.example.shopeeerp.pojo.OzonProductImage> imageEntities = new ArrayList<>();
+        int order = 0;
+
+        if (images != null) {
+            for (String url : images) {
+                if (url != null && !url.trim().isEmpty()) {
+                    com.example.shopeeerp.pojo.OzonProductImage entity = new com.example.shopeeerp.pojo.OzonProductImage();
+                    entity.setProductId(productId);
+                    entity.setImageUrl(url);
+                    entity.setSortOrder(order++);
+                    entity.setIsPrimary(true);
+                    entity.setCreatedAt(new Date());
+                    imageEntities.add(entity);
+                }
+            }
+        }
+
+        order = appendImages(imageEntities, images, productId, order, false);
+        appendImages(imageEntities, colorImages, productId, order, false);
+
+        try {
+            ozonProductImageService.removeByProductId(productId);
+            if (!imageEntities.isEmpty()) {
+                ozonProductImageService.saveBatch(imageEntities);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private int appendImages(List<com.example.shopeeerp.pojo.OzonProductImage> target,
+                             List<String> urls,
+                             Long productId,
+                             int startOrder,
+                             boolean isPrimary) {
+        if (urls == null) {
+            return startOrder;
+        }
+        int order = startOrder;
+        for (String url : urls) {
+            if (url != null && !url.trim().isEmpty()) {
+                com.example.shopeeerp.pojo.OzonProductImage entity = new com.example.shopeeerp.pojo.OzonProductImage();
+                entity.setProductId(productId);
+                entity.setImageUrl(url);
+                entity.setSortOrder(order++);
+                entity.setIsPrimary(isPrimary);
+                entity.setCreatedAt(new Date());
+                target.add(entity);
+            }
+        }
+        return order;
+    }
+
+    /**
+     * 同步商品状态
+     */
+    private void syncProductStatus(OzonProductInfoResponse.ProductInfo productInfo, LocalDateTime now) {
+        if (ozonProductStatusService == null || productInfo == null || productInfo.getId() == null) {
+            return;
+        }
+        OzonProductInfoResponse.Statuses statuses = productInfo.getStatuses();
+        if (statuses == null) {
+            return;
+        }
+        OzonProductStatus entity = new OzonProductStatus();
+        entity.setProductId(productInfo.getId());
+        entity.setIsCreated(statuses.getIs_created());
+        entity.setModerateStatus(statuses.getModerate_status());
+        entity.setStatus(statuses.getStatus());
+        entity.setStatusDescription(statuses.getStatus_description());
+        entity.setStatusFailed(statuses.getStatus_failed());
+        entity.setStatusName(statuses.getStatus_name());
+        entity.setStatusTooltip(statuses.getStatus_tooltip());
+        entity.setValidationStatus(statuses.getValidation_status());
+        entity.setStatusUpdatedAt(parseDate(statuses.getStatus_updated_at()));
+        entity.setCreatedAt(new Date());
+        entity.setUpdatedAt(new Date());
+
+        try {
+            OzonProductStatus existing = ozonProductStatusService.getByProductId(productInfo.getId());
+            if (existing != null) {
+                entity.setId(existing.getId());
+                entity.setCreatedAt(existing.getCreatedAt());
+                ozonProductStatusService.update(entity);
+            } else {
+                ozonProductStatusService.save(entity);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Date parseDate(String value) {
+        if (Strings.isBlank(value)) {
+            return null;
+        }
+        try {
+            LocalDateTime time = LocalDateTime.parse(value.trim(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            return Date.from(time.atZone(java.time.ZoneId.systemDefault()).toInstant());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public PlatformCost fetchCost(String productId) {
-        // TODO: 实现Ozon API调用
-        // 这里应该调用Ozon的API来获取成本数据
-        // 参考Ozon API文档：https://docs.ozon.ru/api/seller/
         PlatformCost cost = new PlatformCost();
         cost.setProductId(productId);
         cost.setCostPrice(new BigDecimal("150.00"));
         cost.setShippingCost(new BigDecimal("20.00"));
         cost.setPlatformFee(new BigDecimal("10.00"));
         cost.setTotalCost(new BigDecimal("180.00"));
-        
         return cost;
     }
 }
