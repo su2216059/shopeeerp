@@ -35,7 +35,7 @@ public class OzonAdapter implements PlatformAdapter {
     
     private static final String OZON_API_BASE_URL = "https://api-seller.ozon.ru";
     private static final String PRODUCT_LIST_URL = OZON_API_BASE_URL + "/v3/product/list";
-    private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v4/product/info/attributes";
+    private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
     
     private final RestTemplate restTemplate;
     
@@ -292,10 +292,7 @@ public class OzonAdapter implements PlatformAdapter {
         try {
             // 构建请求对象
             OzonProductInfoRequest request = new OzonProductInfoRequest();
-            OzonProductInfoRequest.Filter filter = new OzonProductInfoRequest.Filter();
-            filter.setProduct_id(productIds);
-            filter.setVisibility(visibility != null ? visibility : "ALL");
-            request.setFilter(filter);
+            request.setProduct_id(productIds);
             request.setLimit(limit != null ? limit : 100);
             request.setLast_id(lastId != null ? lastId : "");
             request.setSort_dir(sortDir != null ? sortDir : "ASC");
@@ -417,12 +414,11 @@ public class OzonAdapter implements PlatformAdapter {
         productItem.setOzonId(productInfo.getId());
         productItem.setOfferId(productInfo.getOffer_id());
         productItem.setName(productInfo.getName());
-        productItem.setDescriptionCategoryId(productInfo.getCategory_id());
-        productItem.setTypeId(productInfo.getCategory_id()); // 使用category_id作为typeId
-        
+        productItem.setDescriptionCategoryId(productInfo.getDescription_category_id());
+        productItem.setTypeId(productInfo.getType_id()); //
         // 体积重量（根据height, depth, width, weight计算或直接使用weight）
-        if (productInfo.getWeight() != null) {
-            productItem.setVolumeWeight(BigDecimal.valueOf(productInfo.getWeight()));
+        if (productInfo.getVolume_weight() != null) {
+            productItem.setVolumeWeight(BigDecimal.valueOf(productInfo.getVolume_weight()));
         }
         
         // JSON字段序列化
@@ -436,25 +432,15 @@ public class OzonAdapter implements PlatformAdapter {
                     ));
                 }
             }
-            if (productInfo.getImages360() != null && !productInfo.getImages360().isEmpty()) {
-                productItem.setImages360(objectMapper.writeValueAsString(productInfo.getImages360()));
-            }
-            if (productInfo.getAttributes() != null && !productInfo.getAttributes().isEmpty()) {
-                productItem.setStocksInfo(objectMapper.writeValueAsString(productInfo.getAttributes()));
-            }
-            if (productInfo.getComplex_attributes() != null && !productInfo.getComplex_attributes().isEmpty()) {
-                productItem.setSourcesInfo(objectMapper.writeValueAsString(productInfo.getComplex_attributes()));
-            }
-            if (productInfo.getPdf_list() != null && !productInfo.getPdf_list().isEmpty()) {
-                productItem.setBarcodes(objectMapper.writeValueAsString(productInfo.getPdf_list()));
-            }
+
+
         } catch (Exception e) {
             // JSON序列化失败时记录错误但继续处理
             e.printStackTrace();
         }
         
         // 其他字段
-        productItem.setColorImage(productInfo.getColor_image());
+        productItem.setColorImage(productInfo.getColor_image().toString());
         
         return productItem;
     }

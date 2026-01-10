@@ -6,18 +6,14 @@ import java.util.List;
  * Ozon商品详情请求DTO
  */
 public class OzonProductInfoRequest {
-    private Filter filter;
+    private List<String> offer_id;
+    private List<String> product_id;
+    private List<String> sku;
     private Integer limit;
     private String last_id;
     private String sort_dir;
 
-    public Filter getFilter() {
-        return filter;
-    }
 
-    public void setFilter(Filter filter) {
-        this.filter = filter;
-    }
 
     public Integer getLimit() {
         return limit;
@@ -43,24 +39,27 @@ public class OzonProductInfoRequest {
         this.sort_dir = sort_dir;
     }
 
-    public static class Filter {
-        private List<String> product_id;
-        private String visibility;
+    public List<String> getOffer_id() {
+        return offer_id;
+    }
 
-        public List<String> getProduct_id() {
-            return product_id;
-        }
+    public void setOffer_id(List<String> offer_id) {
+        this.offer_id = offer_id;
+    }
 
-        public void setProduct_id(List<String> product_id) {
-            this.product_id = product_id;
-        }
+    public List<String> getProduct_id() {
+        return product_id;
+    }
 
-        public String getVisibility() {
-            return visibility;
-        }
+    public void setProduct_id(List<String> product_id) {
+        this.product_id = product_id;
+    }
 
-        public void setVisibility(String visibility) {
-            this.visibility = visibility;
-        }
+    public List<String> getSku() {
+        return sku;
+    }
+
+    public void setSku(List<String> sku) {
+        this.sku = sku;
     }
 }
