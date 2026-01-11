@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonOrderItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonOrderItem">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="offer_id" property="offerId" jdbcType="VARCHAR"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="image_url" property="imageUrl" jdbcType="VARCHAR"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="tax" property="tax" jdbcType="DECIMAL"/>
+        <result column="cost" property="cost" jdbcType="DECIMAL"/>
+        <result column="profit" property="profit" jdbcType="DECIMAL"/>
+        <result column="weight" property="weight" jdbcType="DECIMAL"/>
+        <result column="tracking_no" property="trackingNo" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="sub_status" property="subStatus" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_id, product_id, offer_id, name, image_url, quantity, price, tax, cost, profit, weight,
+        tracking_no, status, sub_status, created_at, updated_at
+    </sql>
+
+    <select id="selectByOrderId" parameterType="long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM ozon_order_item
+        WHERE order_id = #{orderId}
+    </select>
+
+    <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ozon_order_item (
+            order_id, product_id, offer_id, name, image_url, quantity, price, tax, cost, profit, weight,
+            tracking_no, status, sub_status, created_at, updated_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.orderId}, #{item.productId}, #{item.offerId}, #{item.name}, #{item.imageUrl},
+                #{item.quantity}, #{item.price}, #{item.tax}, #{item.cost}, #{item.profit}, #{item.weight},
+                #{item.trackingNo}, #{item.status}, #{item.subStatus}, #{item.createdAt}, #{item.updatedAt}
+            )
+        </foreach>
+    </insert>
+
+    <delete id="deleteByOrderId" parameterType="long">
+        DELETE FROM ozon_order_item WHERE order_id = #{orderId}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_order_item
+    </delete>
+
+</mapper>

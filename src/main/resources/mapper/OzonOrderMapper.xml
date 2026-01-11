@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonOrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonOrder">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="order_number" property="orderNumber" jdbcType="VARCHAR"/>
+        <result column="shipment_number" property="shipmentNumber" jdbcType="VARCHAR"/>
+        <result column="store" property="store" jdbcType="VARCHAR"/>
+        <result column="amount" property="amount" jdbcType="DECIMAL"/>
+        <result column="ozon_tax" property="ozonTax" jdbcType="DECIMAL"/>
+        <result column="cost" property="cost" jdbcType="DECIMAL"/>
+        <result column="profit" property="profit" jdbcType="DECIMAL"/>
+        <result column="package_info" property="packageInfo" jdbcType="VARCHAR"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="purchase_no" property="purchaseNo" jdbcType="VARCHAR"/>
+        <result column="domestic_no" property="domesticNo" jdbcType="VARCHAR"/>
+        <result column="weight" property="weight" jdbcType="DECIMAL"/>
+        <result column="tracking_no" property="trackingNo" jdbcType="VARCHAR"/>
+        <result column="logistics_type" property="logisticsType" jdbcType="VARCHAR"/>
+        <result column="ship_status" property="shipStatus" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="sub_status" property="subStatus" jdbcType="VARCHAR"/>
+        <result column="order_time" property="orderTime" jdbcType="TIMESTAMP"/>
+        <result column="image_url" property="imageUrl" jdbcType="VARCHAR"/>
+        <result column="detail" property="detail" jdbcType="LONGVARCHAR"/>
+        <result column="currency" property="currency" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="sync_time" property="syncTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_number, shipment_number, store, amount, ozon_tax, cost, profit, package_info, quantity,
+        purchase_no, domestic_no, weight, tracking_no, logistics_type, ship_status, status, sub_status,
+        order_time, image_url, detail, currency, created_at, updated_at, sync_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_order ORDER BY order_time DESC
+    </select>
+
+    <select id="selectById" parameterType="long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_order WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonOrder">
+        INSERT INTO ozon_order (
+            id, order_number, shipment_number, store, amount, ozon_tax, cost, profit, package_info, quantity,
+            purchase_no, domestic_no, weight, tracking_no, logistics_type, ship_status, status, sub_status,
+            order_time, image_url, detail, currency, created_at, updated_at, sync_time
+        ) VALUES (
+            #{id}, #{orderNumber}, #{shipmentNumber}, #{store}, #{amount}, #{ozonTax}, #{cost}, #{profit}, #{packageInfo}, #{quantity},
+            #{purchaseNo}, #{domesticNo}, #{weight}, #{trackingNo}, #{logisticsType}, #{shipStatus}, #{status}, #{subStatus},
+            #{orderTime}, #{imageUrl}, #{detail}, #{currency}, #{createdAt}, #{updatedAt}, #{syncTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.OzonOrder">
+        UPDATE ozon_order SET
+            order_number = #{orderNumber},
+            shipment_number = #{shipmentNumber},
+            store = #{store},
+            amount = #{amount},
+            ozon_tax = #{ozonTax},
+            cost = #{cost},
+            profit = #{profit},
+            package_info = #{packageInfo},
+            quantity = #{quantity},
+            purchase_no = #{purchaseNo},
+            domestic_no = #{domesticNo},
+            weight = #{weight},
+            tracking_no = #{trackingNo},
+            logistics_type = #{logisticsType},
+            ship_status = #{shipStatus},
+            status = #{status},
+            sub_status = #{subStatus},
+            order_time = #{orderTime},
+            image_url = #{imageUrl},
+            detail = #{detail},
+            currency = #{currency},
+            updated_at = #{updatedAt},
+            sync_time = #{syncTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM ozon_order WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_order
+    </delete>
+
+</mapper>

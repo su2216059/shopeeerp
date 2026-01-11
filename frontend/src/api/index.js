@@ -37,6 +37,12 @@ export const ozonProductApi = {
   sync: () => request.get('/ozon/products/sync'),
 }
 
+// Ozon 订单同步数据
+export const ozonOrderApi = {
+  list: () => request.get('/ozon/orders'),
+  sync: () => request.get('/ozon/orders/sync'),
+}
+
 // 订单相关API
 export const orderApi = {
   list: () => request.get('/orders'),

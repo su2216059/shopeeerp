@@ -18,6 +18,7 @@ import InvoiceList from './pages/invoice/InvoiceList'
 import InvoiceForm from './pages/invoice/InvoiceForm'
 import InventoryList from './pages/inventory/InventoryList'
 import InventoryForm from './pages/inventory/InventoryForm'
+import OzonOrderList from './pages/ozonOrder/OzonOrderList'
 import WarehouseList from './pages/warehouse/WarehouseList'
 import WarehouseForm from './pages/warehouse/WarehouseForm'
 import SalesDataList from './pages/salesData/SalesDataList'
@@ -64,6 +65,9 @@ function App() {
           <Route path="/payments" element={<PaymentList />} />
           <Route path="/payments/new" element={<PaymentForm />} />
           <Route path="/payments/edit/:id" element={<PaymentForm />} />
+
+          {/* Ozon 订单 */}
+          <Route path="/ozon/orders" element={<OzonOrderList />} />
           
           {/* 发票管理 */}
           <Route path="/invoices" element={<InvoiceList />} />
