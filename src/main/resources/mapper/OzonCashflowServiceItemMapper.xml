@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonCashflowServiceItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonCashflowServiceItem">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="period_id" property="periodId" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, period_id, name, price, created_at
+    </sql>
+
+    <select id="selectByPeriodId" parameterType="long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_cashflow_service_item WHERE period_id = #{periodId}
+    </select>
+
+    <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ozon_cashflow_service_item (period_id, name, price, created_at) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.periodId}, #{item.name}, #{item.price}, #{item.createdAt})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByPeriodId" parameterType="long">
+        DELETE FROM ozon_cashflow_service_item WHERE period_id = #{periodId}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_cashflow_service_item
+    </delete>
+
+</mapper>

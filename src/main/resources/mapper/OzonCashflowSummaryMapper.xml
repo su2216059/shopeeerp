@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonCashflowSummaryMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonCashflowSummary">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="period_id" property="periodId" jdbcType="BIGINT"/>
+        <result column="commission_amount" property="commissionAmount" jdbcType="DECIMAL"/>
+        <result column="currency_code" property="currencyCode" jdbcType="VARCHAR"/>
+        <result column="item_delivery_return_amount" property="itemDeliveryReturnAmount" jdbcType="DECIMAL"/>
+        <result column="orders_amount" property="ordersAmount" jdbcType="DECIMAL"/>
+        <result column="returns_amount" property="returnsAmount" jdbcType="DECIMAL"/>
+        <result column="services_amount" property="servicesAmount" jdbcType="DECIMAL"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, period_id, commission_amount, currency_code, item_delivery_return_amount,
+        orders_amount, returns_amount, services_amount, created_at
+    </sql>
+
+    <select id="selectByPeriodId" parameterType="long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_cashflow_summary WHERE period_id = #{periodId}
+    </select>
+
+    <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ozon_cashflow_summary (
+            period_id, commission_amount, currency_code, item_delivery_return_amount,
+            orders_amount, returns_amount, services_amount, created_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.periodId}, #{item.commissionAmount}, #{item.currencyCode}, #{item.itemDeliveryReturnAmount},
+                #{item.ordersAmount}, #{item.returnsAmount}, #{item.servicesAmount}, #{item.createdAt}
+            )
+        </foreach>
+    </insert>
+
+    <delete id="deleteByPeriodId" parameterType="long">
+        DELETE FROM ozon_cashflow_summary WHERE period_id = #{periodId}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_cashflow_summary
+    </delete>
+
+</mapper>

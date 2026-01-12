@@ -53,6 +53,7 @@ public class OzonAdapter implements PlatformAdapter {
     private static final String PRODUCT_LIST_URL = OZON_API_BASE_URL + "/v3/product/list";
     private static final String POSTING_LIST_URL = OZON_API_BASE_URL + "/v3/posting/fbs/list";
     private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
+    private static final String CASHFLOW_URL = OZON_API_BASE_URL + "/v3/finance/transaction/list";
 
     private final RestTemplate restTemplate;
     private final OzonProductService ozonProductService;
@@ -387,6 +388,49 @@ public class OzonAdapter implements PlatformAdapter {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 拉取财务现金流报表（按日期区间，分页汇总）
+     */
+    public List<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> fetchCashflows(String start, String end, boolean withDetails, int pageSize) {
+        List<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> responses = new ArrayList<>();
+        int page = 1;
+        int totalPages = 1;
+        String from = start != null ? start : formatUtc(OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
+        String to = end != null ? end : formatUtc(OffsetDateTime.now(ZoneOffset.UTC));
+
+        do {
+            com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest req = new com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest();
+            com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest.DateRange range = new com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest.DateRange();
+            range.setFrom(from);
+            range.setTo(to);
+            req.setDate(range);
+            req.setWithDetails(withDetails);
+            req.setPage(page);
+            req.setPageSize(pageSize);
+
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest> entity = new HttpEntity<>(req, headers);
+
+            ResponseEntity<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> resp = restTemplate.exchange(
+                    CASHFLOW_URL,
+                    HttpMethod.POST,
+                    entity,
+                    com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse.class
+            );
+
+            if (resp.getStatusCode() == HttpStatus.OK && resp.getBody() != null) {
+                com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse body = resp.getBody();
+                responses.add(body);
+                totalPages = body.getPageCount() != null ? body.getPageCount() : 1;
+            } else {
+                break;
+            }
+            page++;
+        } while (page <= totalPages);
+
+        return responses;
     }
 
     @Override

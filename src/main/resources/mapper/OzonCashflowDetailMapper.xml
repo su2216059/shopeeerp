@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonCashflowDetailMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonCashflowDetail">
+        <id column="period_id" property="periodId" jdbcType="BIGINT"/>
+        <result column="begin_balance_amount" property="beginBalanceAmount" jdbcType="DECIMAL"/>
+        <result column="delivery_total" property="deliveryTotal" jdbcType="DECIMAL"/>
+        <result column="delivery_amount" property="deliveryAmount" jdbcType="DECIMAL"/>
+        <result column="return_total" property="returnTotal" jdbcType="DECIMAL"/>
+        <result column="return_amount" property="returnAmount" jdbcType="DECIMAL"/>
+        <result column="loan" property="loan" jdbcType="DECIMAL"/>
+        <result column="invoice_transfer" property="invoiceTransfer" jdbcType="DECIMAL"/>
+        <result column="rfbs_total" property="rfbsTotal" jdbcType="DECIMAL"/>
+        <result column="rfbs_transfer_delivery" property="rfbsTransferDelivery" jdbcType="DECIMAL"/>
+        <result column="rfbs_transfer_delivery_return" property="rfbsTransferDeliveryReturn" jdbcType="DECIMAL"/>
+        <result column="rfbs_compensation_delivery_return" property="rfbsCompensationDeliveryReturn" jdbcType="DECIMAL"/>
+        <result column="rfbs_partial_compensation" property="rfbsPartialCompensation" jdbcType="DECIMAL"/>
+        <result column="rfbs_partial_compensation_return" property="rfbsPartialCompensationReturn" jdbcType="DECIMAL"/>
+        <result column="services_total" property="servicesTotal" jdbcType="DECIMAL"/>
+        <result column="others_total" property="othersTotal" jdbcType="DECIMAL"/>
+        <result column="end_balance_amount" property="endBalanceAmount" jdbcType="DECIMAL"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        period_id, begin_balance_amount, delivery_total, delivery_amount, return_total, return_amount,
+        loan, invoice_transfer, rfbs_total, rfbs_transfer_delivery, rfbs_transfer_delivery_return,
+        rfbs_compensation_delivery_return, rfbs_partial_compensation, rfbs_partial_compensation_return,
+        services_total, others_total, end_balance_amount, created_at
+    </sql>
+
+    <select id="selectByPeriodId" parameterType="long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_cashflow_detail WHERE period_id = #{periodId}
+    </select>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonCashflowDetail">
+        INSERT INTO ozon_cashflow_detail (
+            period_id, begin_balance_amount, delivery_total, delivery_amount, return_total, return_amount,
+            loan, invoice_transfer, rfbs_total, rfbs_transfer_delivery, rfbs_transfer_delivery_return,
+            rfbs_compensation_delivery_return, rfbs_partial_compensation, rfbs_partial_compensation_return,
+            services_total, others_total, end_balance_amount, created_at
+        ) VALUES (
+            #{periodId}, #{beginBalanceAmount}, #{deliveryTotal}, #{deliveryAmount}, #{returnTotal}, #{returnAmount},
+            #{loan}, #{invoiceTransfer}, #{rfbsTotal}, #{rfbsTransferDelivery}, #{rfbsTransferDeliveryReturn},
+            #{rfbsCompensationDeliveryReturn}, #{rfbsPartialCompensation}, #{rfbsPartialCompensationReturn},
+            #{servicesTotal}, #{othersTotal}, #{endBalanceAmount}, #{createdAt}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.OzonCashflowDetail">
+        UPDATE ozon_cashflow_detail SET
+            begin_balance_amount = #{beginBalanceAmount},
+            delivery_total = #{deliveryTotal},
+            delivery_amount = #{deliveryAmount},
+            return_total = #{returnTotal},
+            return_amount = #{returnAmount},
+            loan = #{loan},
+            invoice_transfer = #{invoiceTransfer},
+            rfbs_total = #{rfbsTotal},
+            rfbs_transfer_delivery = #{rfbsTransferDelivery},
+            rfbs_transfer_delivery_return = #{rfbsTransferDeliveryReturn},
+            rfbs_compensation_delivery_return = #{rfbsCompensationDeliveryReturn},
+            rfbs_partial_compensation = #{rfbsPartialCompensation},
+            rfbs_partial_compensation_return = #{rfbsPartialCompensationReturn},
+            services_total = #{servicesTotal},
+            others_total = #{othersTotal},
+            end_balance_amount = #{endBalanceAmount}
+        WHERE period_id = #{periodId}
+    </update>
+
+    <delete id="deleteByPeriodId" parameterType="long">
+        DELETE FROM ozon_cashflow_detail WHERE period_id = #{periodId}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_cashflow_detail
+    </delete>
+
+</mapper>

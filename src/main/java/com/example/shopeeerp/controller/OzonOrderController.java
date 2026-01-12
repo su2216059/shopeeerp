@@ -124,6 +124,7 @@ public class OzonOrderController {
         view.setShipmentDateWithoutDelay(posting.getShipmentDateWithoutDelay());
         view.setDeliveringDate(posting.getDeliveringDate());
         view.setLastChangedAt(posting.getLastChangedAt());
+        view.setAvailableActions(posting.getAvailableActions());
         return view;
     }
 
@@ -142,6 +143,7 @@ public class OzonOrderController {
         private LocalDateTime shipmentDateWithoutDelay;
         private LocalDateTime deliveringDate;
         private LocalDateTime lastChangedAt;
+        private String availableActions;
 
         public String getPostingNumber() {
             return postingNumber;
@@ -253,6 +255,14 @@ public class OzonOrderController {
 
         public void setLastChangedAt(LocalDateTime lastChangedAt) {
             this.lastChangedAt = lastChangedAt;
+        }
+
+        public String getAvailableActions() {
+            return availableActions;
+        }
+
+        public void setAvailableActions(String availableActions) {
+            this.availableActions = availableActions;
         }
     }
 }
