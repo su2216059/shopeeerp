@@ -6,6 +6,7 @@ import com.example.shopeeerp.pojo.*;
 import com.example.shopeeerp.service.*;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,12 +16,16 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
 
     @Autowired
     private OzonAdapter ozonAdapter;
+    @Value("${ozon.shop-id:1}")
+    private Long defaultShopId;
     @Autowired
     private OzonCashflowPeriodService periodService;
     @Autowired
@@ -55,11 +60,14 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
             List<OzonCashflowSummary> summaries = new ArrayList<>();
             if (result.getCashFlows() != null) {
                 for (OzonCashflowResponse.CashFlow cf : result.getCashFlows()) {
-                    if (cf == null || cf.getPeriod() == null || cf.getPeriod().getId() == null) {
+                    if (cf == null || cf.getPeriod() == null) {
                         continue;
                     }
-                    Long periodId = cf.getPeriod().getId();
-                    OzonCashflowPeriod period = buildPeriod(cf.getPeriod(), resp.getPageCount());
+                    Long periodId = buildStablePeriodId(cf.getPeriod());
+                    if (periodId == null) {
+                        continue;
+                    }
+                    OzonCashflowPeriod period = buildPeriod(cf.getPeriod(), resp.getPageCount(), periodId);
                     upsertPeriod(period);
 
                     OzonCashflowSummary summary = new OzonCashflowSummary();
@@ -83,11 +91,14 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
             // 详情 details
             if (result.getDetails() != null && !result.getDetails().isEmpty()) {
                 for (OzonCashflowResponse.Details detailResp : result.getDetails()) {
-                    if (detailResp == null || detailResp.getPeriod() == null || detailResp.getPeriod().getId() == null) {
+                    if (detailResp == null || detailResp.getPeriod() == null) {
                         continue;
                     }
-                    Long periodId = detailResp.getPeriod().getId();
-                    OzonCashflowPeriod period = buildPeriod(detailResp.getPeriod(), resp.getPageCount());
+                    Long periodId = buildStablePeriodId(detailResp.getPeriod());
+                    if (periodId == null) {
+                        continue;
+                    }
+                    OzonCashflowPeriod period = buildPeriod(detailResp.getPeriod(), resp.getPageCount(), periodId);
                     upsertPeriod(period);
 
                     // detail
@@ -184,19 +195,32 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
         }
     }
 
-    private OzonCashflowPeriod buildPeriod(OzonCashflowResponse.Period p, Integer pageCount) {
-        if (p == null || p.getId() == null) {
+    private OzonCashflowPeriod buildPeriod(OzonCashflowResponse.Period p, Integer pageCount, Long periodId) {
+        if (p == null || periodId == null) {
             return null;
         }
         OzonCashflowPeriod period = new OzonCashflowPeriod();
-        period.setId(p.getId());
-        period.setShopId(1L);
+        period.setId(periodId);
+        period.setShopId(defaultShopId);
         period.setBeginTime(parseDateTime(p.getBegin()));
         period.setEndTime(parseDateTime(p.getEnd()));
         period.setPageCount(pageCount);
         period.setCreatedAt(LocalDateTime.now());
         period.setUpdatedAt(LocalDateTime.now());
         return period;
+    }
+
+    private Long buildStablePeriodId(OzonCashflowResponse.Period p) {
+        if (p == null) {
+            return null;
+        }
+        String begin = Strings.isBlank(p.getBegin()) ? "" : p.getBegin().trim();
+        String end = Strings.isBlank(p.getEnd()) ? "" : p.getEnd().trim();
+        if (Strings.isBlank(begin) && Strings.isBlank(end)) {
+            return p.getId();
+        }
+        String raw = begin + "|" + end + "|shop:" + defaultShopId;
+        return Math.abs(UUID.nameUUIDFromBytes(raw.getBytes(StandardCharsets.UTF_8)).getMostSignificantBits());
     }
 
     private OzonCashflowDetail buildDetail(Long periodId, OzonCashflowResponse.Details d) {

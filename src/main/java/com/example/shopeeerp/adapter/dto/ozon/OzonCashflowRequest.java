@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class OzonCashflowRequest {
 
+    @JsonProperty("date")
     private DateRange date;
     @JsonProperty("with_details")
     private Boolean withDetails;
@@ -19,20 +20,20 @@ public class OzonCashflowRequest {
         this.date = date;
     }
 
-    public Boolean getWithDetails() {
-        return withDetails;
-    }
-
-    public void setWithDetails(Boolean withDetails) {
-        this.withDetails = withDetails;
-    }
-
     public Integer getPage() {
         return page;
     }
 
     public void setPage(Integer page) {
         this.page = page;
+    }
+
+    public Boolean getWithDetails() {
+        return withDetails;
+    }
+
+    public void setWithDetails(Boolean withDetails) {
+        this.withDetails = withDetails;
     }
 
     public Integer getPageSize() {
@@ -44,7 +45,9 @@ public class OzonCashflowRequest {
     }
 
     public static class DateRange {
+        @JsonProperty("from")
         private String from;
+        @JsonProperty("to")
         private String to;
 
         public String getFrom() {

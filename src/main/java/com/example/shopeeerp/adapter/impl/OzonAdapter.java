@@ -1,13 +1,7 @@
 package com.example.shopeeerp.adapter.impl;
 
 import com.example.shopeeerp.adapter.PlatformAdapter;
-import com.example.shopeeerp.adapter.dto.ozon.OzonPostingListRequest;
-import com.example.shopeeerp.adapter.dto.ozon.OzonPostingListResponse;
-import com.example.shopeeerp.adapter.dto.ozon.OzonProductInfoRequest;
-import com.example.shopeeerp.adapter.dto.ozon.OzonProductInfoResponse;
-import com.example.shopeeerp.adapter.dto.ozon.OzonProductListRequest;
-import com.example.shopeeerp.adapter.dto.ozon.OzonProductListResponse;
-import com.example.shopeeerp.adapter.dto.ozon.OzonPostingSyncResult;
+import com.example.shopeeerp.adapter.dto.ozon.*;
 import com.example.shopeeerp.adapter.model.PlatformCost;
 import com.example.shopeeerp.adapter.model.PlatformOrder;
 import com.example.shopeeerp.adapter.model.PlatformOrderItem;
@@ -21,6 +15,8 @@ import com.example.shopeeerp.service.OzonProductService;
 import com.example.shopeeerp.service.OzonProductStatusService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -30,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -53,7 +50,9 @@ public class OzonAdapter implements PlatformAdapter {
     private static final String PRODUCT_LIST_URL = OZON_API_BASE_URL + "/v3/product/list";
     private static final String POSTING_LIST_URL = OZON_API_BASE_URL + "/v3/posting/fbs/list";
     private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
-    private static final String CASHFLOW_URL = OZON_API_BASE_URL + "/v3/finance/transaction/list";
+    private static final String CASHFLOW_URL = OZON_API_BASE_URL + "/v1/finance/cash-flow-statement/list";
+
+    private static final Logger log = LoggerFactory.getLogger(OzonAdapter.class);
 
     private final RestTemplate restTemplate;
     private final OzonProductService ozonProductService;
@@ -66,6 +65,12 @@ public class OzonAdapter implements PlatformAdapter {
 
     @Value("${ozon.api.api-key:}")
     private String apiKey;
+
+    @Value("${ozon.http.max-retries:2}")
+    private int cashflowMaxRetries;
+
+    @Value("${ozon.http.retry-backoff-ms:1000}")
+    private long cashflowRetryBackoffMs;
 
     /**
      * 默认店铺ID，避免 posting.shop_id 外键约束失败；多店铺时请注入实际店铺ID
@@ -399,6 +404,7 @@ public class OzonAdapter implements PlatformAdapter {
         int totalPages = 1;
         String from = start != null ? start : formatUtc(OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         String to = end != null ? end : formatUtc(OffsetDateTime.now(ZoneOffset.UTC));
+        int maxAttempts = Math.max(cashflowMaxRetries, 0) + 1;
 
         do {
             com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest req = new com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest();
@@ -413,24 +419,51 @@ public class OzonAdapter implements PlatformAdapter {
             HttpHeaders headers = buildAuthHeaders();
             HttpEntity<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest> entity = new HttpEntity<>(req, headers);
 
-            ResponseEntity<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> resp = restTemplate.exchange(
-                    CASHFLOW_URL,
-                    HttpMethod.POST,
-                    entity,
-                    com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse.class
-            );
+            boolean pageFetched = false;
+            int attempt = 0;
+            while (!pageFetched && attempt < maxAttempts) {
+                try {
+                    ResponseEntity<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> resp = restTemplate.exchange(
+                            CASHFLOW_URL,
+                            HttpMethod.POST,
+                            entity,
+                            com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse.class
+                    );
 
-            if (resp.getStatusCode() == HttpStatus.OK && resp.getBody() != null) {
-                com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse body = resp.getBody();
-                responses.add(body);
-                totalPages = body.getPageCount() != null ? body.getPageCount() : 1;
-            } else {
-                break;
+                    if (resp.getStatusCode() == HttpStatus.OK && resp.getBody() != null) {
+                        com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse body = resp.getBody();
+                        responses.add(body);
+                        totalPages = body.getPageCount() != null ? body.getPageCount() : 1;
+                        pageFetched = true;
+                    } else {
+                        throw new IllegalStateException("调用 Ozon 财务报表接口失败，状态码：" + resp.getStatusCode());
+                    }
+                } catch (ResourceAccessException ex) {
+                    attempt++;
+                    if (attempt >= maxAttempts) {
+                        throw new IllegalStateException(String.format("调用 Ozon 财务报表接口第 %d 页超时，已重试 %d 次", page, attempt - 1), ex);
+                    }
+                    long delay = Math.max(cashflowRetryBackoffMs, 0L) * attempt;
+                    log.warn("Ozon cashflow page {} request timed out (attempt {}/{}). Retrying in {} ms", page, attempt, maxAttempts, delay);
+                    sleepQuietly(delay);
+                }
             }
+
             page++;
         } while (page <= totalPages);
 
         return responses;
+    }
+
+    private void sleepQuietly(long millis) {
+        if (millis <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
@@ -746,21 +779,14 @@ public class OzonAdapter implements PlatformAdapter {
         List<com.example.shopeeerp.pojo.OzonProductImage> imageEntities = new ArrayList<>();
         int order = 0;
 
-        if (images != null) {
-            for (String url : images) {
-                if (url != null && !url.trim().isEmpty()) {
-                    com.example.shopeeerp.pojo.OzonProductImage entity = new com.example.shopeeerp.pojo.OzonProductImage();
-                    entity.setProductId(productId);
-                    entity.setImageUrl(url);
-                    entity.setSortOrder(order++);
-                    entity.setIsPrimary(true);
-                    entity.setCreatedAt(new Date());
-                    imageEntities.add(entity);
-                }
-            }
-        }
-
+        // 处理主图
+        List<String> primaryImages = productInfo.getPrimary_image();
+        order = appendImages(imageEntities, primaryImages, productId, order, true);
+        
+        // 处理普通图片
         order = appendImages(imageEntities, images, productId, order, false);
+        
+        // 处理颜色图片
         appendImages(imageEntities, colorImages, productId, order, false);
 
         try {
