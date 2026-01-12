@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonPostingMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonPosting">
+        <id column="posting_number" property="postingNumber" jdbcType="VARCHAR"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
+        <result column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="order_number" property="orderNumber" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="substatus" property="substatus" jdbcType="VARCHAR"/>
+        <result column="tpl_integration_type" property="tplIntegrationType" jdbcType="VARCHAR"/>
+        <result column="delivery_method_id" property="deliveryMethodId" jdbcType="BIGINT"/>
+        <result column="delivery_method_name" property="deliveryMethodName" jdbcType="VARCHAR"/>
+        <result column="warehouse_id" property="warehouseId" jdbcType="BIGINT"/>
+        <result column="warehouse_name" property="warehouseName" jdbcType="VARCHAR"/>
+        <result column="tpl_provider_id" property="tplProviderId" jdbcType="BIGINT"/>
+        <result column="tpl_provider_name" property="tplProviderName" jdbcType="VARCHAR"/>
+        <result column="tracking_number" property="trackingNumber" jdbcType="VARCHAR"/>
+        <result column="in_process_at" property="inProcessAt" jdbcType="TIMESTAMP"/>
+        <result column="shipment_date" property="shipmentDate" jdbcType="TIMESTAMP"/>
+        <result column="shipment_date_without_delay" property="shipmentDateWithoutDelay" jdbcType="TIMESTAMP"/>
+        <result column="delivering_date" property="deliveringDate" jdbcType="TIMESTAMP"/>
+        <result column="is_express" property="isExpress" jdbcType="BIT"/>
+        <result column="customer_json" property="customerJson" jdbcType="LONGVARCHAR"/>
+        <result column="addressee_json" property="addresseeJson" jdbcType="LONGVARCHAR"/>
+        <result column="barcodes_json" property="barcodesJson" jdbcType="LONGVARCHAR"/>
+        <result column="analytics_json" property="analyticsJson" jdbcType="LONGVARCHAR"/>
+        <result column="financial_json" property="financialJson" jdbcType="LONGVARCHAR"/>
+        <result column="optional_json" property="optionalJson" jdbcType="LONGVARCHAR"/>
+        <result column="cancellation_json" property="cancellationJson" jdbcType="LONGVARCHAR"/>
+        <result column="requirements_json" property="requirementsJson" jdbcType="LONGVARCHAR"/>
+        <result column="tariffication_json" property="tarifficationJson" jdbcType="LONGVARCHAR"/>
+        <result column="available_actions" property="availableActions" jdbcType="LONGVARCHAR"/>
+        <result column="last_changed_at" property="lastChangedAt" jdbcType="TIMESTAMP"/>
+        <result column="raw_payload" property="rawPayload" jdbcType="LONGVARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        posting_number, shop_id, order_id, order_number, status, substatus, tpl_integration_type,
+        delivery_method_id, delivery_method_name, warehouse_id, warehouse_name, tpl_provider_id, tpl_provider_name,
+        tracking_number, in_process_at, shipment_date, shipment_date_without_delay, delivering_date, is_express,
+        customer_json, addressee_json, barcodes_json, analytics_json, financial_json, optional_json, cancellation_json,
+        requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, created_at, updated_at
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_posting ORDER BY last_changed_at DESC
+    </select>
+
+    <select id="selectByPostingNumber" parameterType="string" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_posting WHERE posting_number = #{postingNumber}
+    </select>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonPosting">
+        INSERT INTO ozon_posting (
+            posting_number, shop_id, order_id, order_number, status, substatus, tpl_integration_type,
+            delivery_method_id, delivery_method_name, warehouse_id, warehouse_name, tpl_provider_id, tpl_provider_name,
+            tracking_number, in_process_at, shipment_date, shipment_date_without_delay, delivering_date, is_express,
+            customer_json, addressee_json, barcodes_json, analytics_json, financial_json, optional_json, cancellation_json,
+            requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, created_at, updated_at
+        ) VALUES (
+            #{postingNumber}, #{shopId}, #{orderId}, #{orderNumber}, #{status}, #{substatus}, #{tplIntegrationType},
+            #{deliveryMethodId}, #{deliveryMethodName}, #{warehouseId}, #{warehouseName}, #{tplProviderId}, #{tplProviderName},
+            #{trackingNumber}, #{inProcessAt}, #{shipmentDate}, #{shipmentDateWithoutDelay}, #{deliveringDate}, #{isExpress},
+            #{customerJson}, #{addresseeJson}, #{barcodesJson}, #{analyticsJson}, #{financialJson}, #{optionalJson}, #{cancellationJson},
+            #{requirementsJson}, #{tarifficationJson}, #{availableActions}, #{lastChangedAt}, #{rawPayload}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO ozon_posting (
+            posting_number, shop_id, order_id, order_number, status, substatus, tpl_integration_type,
+            delivery_method_id, delivery_method_name, warehouse_id, warehouse_name, tpl_provider_id, tpl_provider_name,
+            tracking_number, in_process_at, shipment_date, shipment_date_without_delay, delivering_date, is_express,
+            customer_json, addressee_json, barcodes_json, analytics_json, financial_json, optional_json, cancellation_json,
+            requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, created_at, updated_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.postingNumber}, #{item.shopId}, #{item.orderId}, #{item.orderNumber}, #{item.status}, #{item.substatus}, #{item.tplIntegrationType},
+                #{item.deliveryMethodId}, #{item.deliveryMethodName}, #{item.warehouseId}, #{item.warehouseName}, #{item.tplProviderId}, #{item.tplProviderName},
+                #{item.trackingNumber}, #{item.inProcessAt}, #{item.shipmentDate}, #{item.shipmentDateWithoutDelay}, #{item.deliveringDate}, #{item.isExpress},
+                #{item.customerJson}, #{item.addresseeJson}, #{item.barcodesJson}, #{item.analyticsJson}, #{item.financialJson}, #{item.optionalJson}, #{item.cancellationJson},
+                #{item.requirementsJson}, #{item.tarifficationJson}, #{item.availableActions}, #{item.lastChangedAt}, #{item.rawPayload}, #{item.createdAt}, #{item.updatedAt}
+            )
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="com.example.shopeeerp.pojo.OzonPosting">
+        UPDATE ozon_posting SET
+            shop_id = #{shopId},
+            order_id = #{orderId},
+            order_number = #{orderNumber},
+            status = #{status},
+            substatus = #{substatus},
+            tpl_integration_type = #{tplIntegrationType},
+            delivery_method_id = #{deliveryMethodId},
+            delivery_method_name = #{deliveryMethodName},
+            warehouse_id = #{warehouseId},
+            warehouse_name = #{warehouseName},
+            tpl_provider_id = #{tplProviderId},
+            tpl_provider_name = #{tplProviderName},
+            tracking_number = #{trackingNumber},
+            in_process_at = #{inProcessAt},
+            shipment_date = #{shipmentDate},
+            shipment_date_without_delay = #{shipmentDateWithoutDelay},
+            delivering_date = #{deliveringDate},
+            is_express = #{isExpress},
+            customer_json = #{customerJson},
+            addressee_json = #{addresseeJson},
+            barcodes_json = #{barcodesJson},
+            analytics_json = #{analyticsJson},
+            financial_json = #{financialJson},
+            optional_json = #{optionalJson},
+            cancellation_json = #{cancellationJson},
+            requirements_json = #{requirementsJson},
+            tariffication_json = #{tarifficationJson},
+            available_actions = #{availableActions},
+            last_changed_at = #{lastChangedAt},
+            raw_payload = #{rawPayload},
+            updated_at = #{updatedAt}
+        WHERE posting_number = #{postingNumber}
+    </update>
+
+    <delete id="deleteByPostingNumber" parameterType="string">
+        DELETE FROM ozon_posting WHERE posting_number = #{postingNumber}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_posting
+    </delete>
+
+</mapper>

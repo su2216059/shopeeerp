@@ -1,14 +1,20 @@
 package com.example.shopeeerp.adapter.impl;
 
 import com.example.shopeeerp.adapter.PlatformAdapter;
+import com.example.shopeeerp.adapter.dto.ozon.OzonPostingListRequest;
+import com.example.shopeeerp.adapter.dto.ozon.OzonPostingListResponse;
 import com.example.shopeeerp.adapter.dto.ozon.OzonProductInfoRequest;
 import com.example.shopeeerp.adapter.dto.ozon.OzonProductInfoResponse;
 import com.example.shopeeerp.adapter.dto.ozon.OzonProductListRequest;
 import com.example.shopeeerp.adapter.dto.ozon.OzonProductListResponse;
+import com.example.shopeeerp.adapter.dto.ozon.OzonPostingSyncResult;
 import com.example.shopeeerp.adapter.model.PlatformCost;
 import com.example.shopeeerp.adapter.model.PlatformOrder;
+import com.example.shopeeerp.adapter.model.PlatformOrderItem;
 import com.example.shopeeerp.adapter.model.PlatformProduct;
 import com.example.shopeeerp.pojo.OzonProduct;
+import com.example.shopeeerp.pojo.OzonPosting;
+import com.example.shopeeerp.pojo.OzonPostingItem;
 import com.example.shopeeerp.pojo.OzonProductStatus;
 import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
@@ -28,6 +34,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +51,7 @@ public class OzonAdapter implements PlatformAdapter {
 
     private static final String OZON_API_BASE_URL = "https://api-seller.ozon.ru";
     private static final String PRODUCT_LIST_URL = OZON_API_BASE_URL + "/v3/product/list";
+    private static final String POSTING_LIST_URL = OZON_API_BASE_URL + "/v3/posting/fbs/list";
     private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
 
     private final RestTemplate restTemplate;
@@ -56,6 +65,12 @@ public class OzonAdapter implements PlatformAdapter {
 
     @Value("${ozon.api.api-key:}")
     private String apiKey;
+
+    /**
+     * 默认店铺ID，避免 posting.shop_id 外键约束失败；多店铺时请注入实际店铺ID
+     */
+    @Value("${ozon.shop-id:1}")
+    private Long defaultShopId;
 
     @Autowired
     public OzonAdapter(RestTemplate restTemplate,
@@ -75,19 +90,303 @@ public class OzonAdapter implements PlatformAdapter {
 
     @Override
     public List<PlatformOrder> fetchOrders(String startDate, String endDate) {
-        // TODO 调用 Ozon 订单 API
         List<PlatformOrder> orders = new ArrayList<>();
-        PlatformOrder order = new PlatformOrder();
-        order.setPlatformOrderId("OZ345678");
-        order.setCustomerId("C003");
-        order.setCustomerName("Demo Customer 3");
-        order.setStatus("PENDING");
-        order.setTotalAmount(new BigDecimal("299.99"));
-        order.setPaymentStatus("PAID");
-        order.setShippingStatus("PENDING_SHIPMENT");
-        order.setOrderDate(LocalDateTime.now());
-        orders.add(order);
+
+        int limit = 200;
+        int offset = 0;
+        boolean hasNext;
+
+        String since = startDate != null ? startDate : formatUtc(OffsetDateTime.now(ZoneOffset.UTC).minusDays(7));
+        String to = endDate != null ? endDate : formatUtc(OffsetDateTime.now(ZoneOffset.UTC));
+
+        do {
+            OzonPostingListRequest request = buildPostingListRequest(since, to, limit, offset);
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<OzonPostingListRequest> entity = new HttpEntity<>(request, headers);
+
+            try {
+                ResponseEntity<OzonPostingListResponse> response = restTemplate.exchange(
+                        POSTING_LIST_URL,
+                        HttpMethod.POST,
+                        entity,
+                        OzonPostingListResponse.class
+                );
+
+                OzonPostingListResponse body = response.getBody();
+                if (response.getStatusCode() == HttpStatus.OK && body != null && body.getResult() != null) {
+                    List<OzonPostingListResponse.Posting> postings = body.getResult().getPostings();
+                    if (postings != null) {
+                        postings.stream()
+                                .map(this::convertPostingToPlatformOrder)
+                                .forEach(orders::add);
+                    }
+                    hasNext = Boolean.TRUE.equals(body.getResult().getHasNext());
+                } else {
+                    hasNext = false;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                hasNext = false;
+            }
+
+            offset += limit;
+        } while (hasNext);
+
         return orders;
+    }
+
+    /**
+     * 新增：获取 posting 数据并转换为数据库实体（postings + items）
+     */
+    public OzonPostingSyncResult fetchPostings(String startDate, String endDate) {
+        List<OzonPosting> postings = new ArrayList<>();
+        List<OzonPostingItem> items = new ArrayList<>();
+
+        int limit = 200;
+        int offset = 0;
+        boolean hasNext;
+
+        String since = startDate != null ? startDate : formatUtc(OffsetDateTime.now(ZoneOffset.UTC).minusDays(7));
+        String to = endDate != null ? endDate : formatUtc(OffsetDateTime.now(ZoneOffset.UTC));
+
+        do {
+            OzonPostingListRequest request = buildPostingListRequest(since, to, limit, offset);
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<OzonPostingListRequest> entity = new HttpEntity<>(request, headers);
+
+            try {
+                ResponseEntity<OzonPostingListResponse> response = restTemplate.exchange(
+                        POSTING_LIST_URL,
+                        HttpMethod.POST,
+                        entity,
+                        OzonPostingListResponse.class
+                );
+
+                OzonPostingListResponse body = response.getBody();
+                if (response.getStatusCode() == HttpStatus.OK && body != null && body.getResult() != null) {
+                    List<OzonPostingListResponse.Posting> postingList = body.getResult().getPostings();
+                    if (postingList != null) {
+                        for (OzonPostingListResponse.Posting p : postingList) {
+                            if (p == null) {
+                                continue;
+                            }
+                            OzonPosting postingEntity = convertPostingToEntity(p);
+                            postings.add(postingEntity);
+                            items.addAll(convertPostingItems(p));
+                        }
+                    }
+                    hasNext = Boolean.TRUE.equals(body.getResult().getHasNext());
+                } else {
+                    hasNext = false;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                hasNext = false;
+            }
+
+            offset += limit;
+        } while (hasNext);
+
+        OzonPostingSyncResult result = new OzonPostingSyncResult();
+        result.setPostings(postings);
+        result.setItems(items);
+        return result;
+    }
+
+    private OzonPostingListRequest buildPostingListRequest(String since, String to, int limit, int offset) {
+        OzonPostingListRequest request = new OzonPostingListRequest();
+        request.setDir("ASC");
+        request.setLimit(limit);
+        request.setOffset(offset);
+
+        OzonPostingListRequest.Filter filter = new OzonPostingListRequest.Filter();
+        filter.setSince(since);
+        filter.setTo(to);
+        OzonPostingListRequest.LastChangedStatusDate lastChanged = new OzonPostingListRequest.LastChangedStatusDate();
+        lastChanged.setFrom(since);
+        lastChanged.setTo(to);
+        filter.setLastChangedStatusDate(lastChanged);
+        request.setFilter(filter);
+
+        OzonPostingListRequest.With withFields = new OzonPostingListRequest.With();
+        withFields.setAnalyticsData(true);
+        withFields.setBarcodes(true);
+        withFields.setFinancialData(true);
+        withFields.setTranslit(true);
+        request.setWithFields(withFields);
+
+        return request;
+    }
+
+    private HttpHeaders buildAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Client-Id", clientId);
+        headers.set("Api-Key", apiKey);
+        return headers;
+    }
+
+    private OzonPosting convertPostingToEntity(OzonPostingListResponse.Posting posting) {
+        OzonPosting entity = new OzonPosting();
+        entity.setPostingNumber(posting.getPostingNumber());
+        // 绑定店铺ID，避免外键约束失败
+        entity.setShopId(defaultShopId);
+        entity.setOrderId(posting.getOrderId());
+        entity.setOrderNumber(posting.getOrderNumber());
+        entity.setStatus(posting.getStatus());
+        entity.setSubstatus(posting.getSubstatus());
+        entity.setTplIntegrationType(posting.getTplIntegrationType());
+
+        OzonPostingListResponse.DeliveryMethod dm = posting.getDeliveryMethod();
+        if (dm != null) {
+            entity.setDeliveryMethodId(dm.getId());
+            entity.setDeliveryMethodName(dm.getName());
+            entity.setWarehouseId(dm.getWarehouseId());
+            entity.setWarehouseName(dm.getWarehouse());
+            entity.setTplProviderId(dm.getTplProviderId());
+            entity.setTplProviderName(dm.getTplProvider());
+        }
+
+        entity.setTrackingNumber(posting.getTrackingNumber());
+        entity.setInProcessAt(parseDateTime(posting.getInProcessAt()));
+        entity.setShipmentDate(parseDateTime(posting.getShipmentDate()));
+        entity.setShipmentDateWithoutDelay(parseDateTime(posting.getShipmentDateWithoutDelay()));
+        entity.setDeliveringDate(parseDateTime(posting.getDeliveringDate()));
+        entity.setIsExpress(posting.getIsExpress());
+
+        entity.setCustomerJson(toJson(posting.getCustomer()));
+        entity.setAddresseeJson(toJson(posting.getAddressee()));
+        entity.setBarcodesJson(toJson(posting.getBarcodes()));
+        entity.setAnalyticsJson(toJson(posting.getAnalyticsData()));
+        entity.setFinancialJson(toJson(posting.getFinancialData()));
+        entity.setOptionalJson(toJson(posting.getOptional()));
+        entity.setCancellationJson(toJson(posting.getCancellation()));
+        entity.setRequirementsJson(toJson(posting.getRequirements()));
+        entity.setTarifficationJson(toJson(posting.getTariffication()));
+        entity.setAvailableActions(toJson(posting.getAvailableActions()));
+        entity.setLastChangedAt(entity.getInProcessAt() != null ? entity.getInProcessAt() : LocalDateTime.now());
+        entity.setRawPayload(toJson(posting));
+
+        LocalDateTime now = LocalDateTime.now();
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+        return entity;
+    }
+
+    private List<OzonPostingItem> convertPostingItems(OzonPostingListResponse.Posting posting) {
+        List<OzonPostingItem> result = new ArrayList<>();
+        if (posting.getProducts() == null) {
+            return result;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (OzonPostingListResponse.Product p : posting.getProducts()) {
+            if (p == null) {
+                continue;
+            }
+            OzonPostingItem item = new OzonPostingItem();
+            item.setPostingNumber(posting.getPostingNumber());
+            item.setSku(p.getSku());
+            item.setOfferId(p.getOfferId());
+            item.setName(p.getName());
+            item.setCurrencyCode(p.getCurrencyCode());
+            item.setPrice(parseBigDecimal(p.getPrice()));
+            item.setQuantity(p.getQuantity());
+            item.setImei(toJson(p.getImei()));
+            item.setCreatedAt(now);
+            item.setUpdatedAt(now);
+            result.add(item);
+        }
+        return result;
+    }
+
+    private PlatformOrder convertPostingToPlatformOrder(OzonPostingListResponse.Posting posting) {
+        PlatformOrder order = new PlatformOrder();
+        order.setPlatformOrderId(posting.getPostingNumber());
+        if (posting.getOrderId() != null) {
+            order.setOrderId(String.valueOf(posting.getOrderId()));
+        } else {
+            order.setOrderId(posting.getPostingNumber());
+        }
+        order.setStatus(posting.getStatus());
+        order.setPaymentStatus(posting.getSubstatus());
+        order.setShippingStatus(posting.getStatus());
+        order.setOrderDate(parseDateTime(posting.getInProcessAt()));
+        List<PlatformOrderItem> items = convertProducts(posting.getProducts());
+        order.setItems(items);
+        order.setTotalAmount(sumTotalAmount(items));
+        return order;
+    }
+
+    private List<PlatformOrderItem> convertProducts(List<OzonPostingListResponse.Product> products) {
+        if (products == null || products.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<PlatformOrderItem> items = new ArrayList<>();
+        for (OzonPostingListResponse.Product product : products) {
+            PlatformOrderItem item = new PlatformOrderItem();
+            item.setProductId(product.getSku() != null ? String.valueOf(product.getSku()) : null);
+            item.setProductSku(product.getOfferId());
+            item.setProductName(product.getName());
+            item.setQuantity(product.getQuantity());
+            BigDecimal unitPrice = parseBigDecimal(product.getPrice());
+            item.setUnitPrice(unitPrice);
+            if (unitPrice != null && product.getQuantity() != null) {
+                item.setTotalPrice(unitPrice.multiply(BigDecimal.valueOf(product.getQuantity())));
+            }
+            items.add(item);
+        }
+        return items;
+    }
+
+    private BigDecimal sumTotalAmount(List<PlatformOrderItem> items) {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return items.stream()
+                .map(PlatformOrderItem::getTotalPrice)
+                .filter(v -> v != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (Strings.isBlank(value)) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(value.trim(), DateTimeFormatter.ISO_OFFSET_DATE_TIME).toLocalDateTime();
+        } catch (Exception ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value.trim(), DateTimeFormatter.ISO_DATE_TIME);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private BigDecimal parseBigDecimal(String value) {
+        if (Strings.isBlank(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String formatUtc(OffsetDateTime time) {
+        return time.withOffsetSameInstant(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    }
+
+    private String toJson(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override

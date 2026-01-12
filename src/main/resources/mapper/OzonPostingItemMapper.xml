@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonPostingItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonPostingItem">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="posting_number" property="postingNumber" jdbcType="VARCHAR"/>
+        <result column="sku" property="sku" jdbcType="BIGINT"/>
+        <result column="offer_id" property="offerId" jdbcType="VARCHAR"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="currency_code" property="currencyCode" jdbcType="VARCHAR"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="imei" property="imei" jdbcType="LONGVARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, posting_number, sku, offer_id, name, currency_code, price, quantity, imei, created_at, updated_at
+    </sql>
+
+    <select id="selectByPostingNumber" parameterType="string" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_posting_item WHERE posting_number = #{postingNumber}
+    </select>
+
+    <insert id="insertBatch" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ozon_posting_item (
+            posting_number, sku, offer_id, name, currency_code, price, quantity, imei, created_at, updated_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.postingNumber}, #{item.sku}, #{item.offerId}, #{item.name},
+                #{item.currencyCode}, #{item.price}, #{item.quantity}, #{item.imei},
+                #{item.createdAt}, #{item.updatedAt}
+            )
+        </foreach>
+    </insert>
+
+    <delete id="deleteByPostingNumber" parameterType="string">
+        DELETE FROM ozon_posting_item WHERE posting_number = #{postingNumber}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM ozon_posting_item
+    </delete>
+
+</mapper>

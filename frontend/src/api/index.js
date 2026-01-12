@@ -40,7 +40,7 @@ export const ozonProductApi = {
 // Ozon 订单同步数据
 export const ozonOrderApi = {
   list: () => request.get('/ozon/orders'),
-  sync: () => request.get('/ozon/orders/sync'),
+  sync: (params) => request.get('/ozon/orders/sync', { params }),
 }
 
 // 订单相关API

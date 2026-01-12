@@ -1,0 +1,397 @@
+请求接口
+https://api-seller.ozon.ru/v3/posting/fbs/list
+请求参数
+{
+  "dir": "ASC",
+  "filter": {
+    "delivery_method_id": [
+      "21321684811000"
+    ],
+    "fbpFilter": "string",
+    "last_changed_status_date": {
+      "from": "2023-11-03T11:47:39.878Z",
+      "to": "2023-11-03T11:47:39.878Z"
+    },
+    "order_id": 0,
+    "provider_id": [
+      "24"
+    ],
+    "since": "2023-11-03T11:47:39.878Z",
+    "status": "awaiting_packaging",
+    "to": "2023-11-03T11:47:39.878Z",
+    "warehouse_id": [
+      "21321684811000"
+    ]
+  },
+  "limit": 100,
+  "offset": 0,
+  "with": {
+    "analytics_data": true,
+    "barcodes": true,
+    "financial_data": true,
+    "translit": true
+  }
+}
+
+请求参数介绍 
+delivery_method_id	
+Array of integers <int64>
+快递方式ID。按照运输方式筛选。可以使用方法 /v1/delivery-method/list获取。
+
+fbpFilter	
+string
+从合作伙伴仓库（FBP）发货时的货件筛选器：
+
+ALL — 响应中将显示所有符合其他筛选器条件的货件；
+ONLY — 仅显示FBP货件；
+WITHOUT — 显示除FBP外的所有货件。
+默认值为 ALL。
+
+order_id	
+integer <int64>
+订单ID。
+
+provider_id	
+Array of integers <int64>
+快递服务ID。按照运输方式筛选。可以使用方法 /v1/delivery-method/list获取。
+
+since
+required
+string <date-time>
+应收到货件清单时间段的开始日期。
+
+UTC模式: ГГГГ-ММ-ДДTЧЧ:ММ:ССZ.
+
+例子: 2019-08-24T14:15:22Z.
+
+to
+required
+string <date-time>
+应收到货件清单时间段的结束日期。
+
+UTC模式： ГГГГ-ММ-ДДTЧЧ:ММ:ССZ.
+
+例子： 2019-08-24T14:15:22Z.
+
+status	
+string
+货件运输状态：
+
+awaiting_registration — 等待注册，
+acceptance_in_progress — 正在验收，
+awaiting_approve — 等待确认，
+awaiting_packaging — 等待包装，
+awaiting_deliver — 等待装运，
+arbitration — 仲裁，
+client_arbitration — 快递客户仲裁，
+delivering — 运输中，
+driver_pickup — 司机处，
+delivered — 已送达，
+cancelled — 已取消，
+not_accepted — 分拣中心未接受，
+sent_by_seller – 由卖家发送。
+warehouse_id	
+Array of strings <int64>
+仓库ID。可以使用方法 /v1/warehouse/list获取。
+
+last_changed_status_date	
+object
+货件最后一次更改过状态的时期。
+
+from	
+string <date-time>
+时期开始日期。
+
+to	
+string <date-time>
+时期结束日期。
+
+limit
+required
+integer <int64>
+响应中值的数量：
+
+最大值 — 1000,
+最小值 — 1。
+offset
+required
+integer <int64>
+将在响应中跳过的元素数。 例如，如果“offset=10”，那么响应将从找到的第11个元素开始。
+
+with	
+object
+要添加到响应的附加字段。
+
+
+响应参数
+{
+  "result": {
+    "postings": [
+      {
+        "posting_number": "05708065-0029-1",
+        "order_id": 680420041,
+        "order_number": "05708065-0029",
+        "status": "awaiting_deliver",
+        "substatus": "posting_awaiting_passport_data",
+        "delivery_method": {
+          "id": 21321684811000,
+          "name": "Ozon独立物流, 克拉斯诺戈尔斯克",
+          "warehouse_id": 21321684811000,
+          "warehouse": "Steam Toys Nahabino",
+          "tpl_provider_id": 24,
+          "tpl_provider": "Ozon物流"
+        },
+        "tracking_number": "",
+        "tpl_integration_type": "ozon",
+        "in_process_at": "2022-05-13T07:07:32Z",
+        "shipment_date": "2022-05-13T10:00:00Z",
+        "shipment_date_without_delay": "2022-05-13T10:00:00Z",
+        "delivering_date": null,
+        "optional": {
+          "products_with_possible_mandatory_mark": [
+            0
+          ]
+        },
+        "cancellation": {
+          "cancel_reason_id": 0,
+          "cancel_reason": "",
+          "cancellation_type": "",
+          "cancelled_after_ship": false,
+          "affect_cancellation_rating": false,
+          "cancellation_initiator": ""
+        },
+        "customer": null,
+        "products": [
+          {
+            "price": "1390.000000",
+            "currency_code": "RUB",
+            "offer_id": "205953",
+            "name": " Electronic designer PinLab Positronic",
+            "sku": 358924380,
+            "quantity": 1,
+            "imei": []
+          }
+        ],
+        "addressee": null,
+        "barcodes": null,
+        "analytics_data": null,
+        "financial_data": null,
+        "is_express": false,
+        "legal_info": {
+          "company_name": "string",
+          "inn": "string",
+          "kpp": "string"
+        },
+        "requirements": {
+          "products_requiring_change_country": [],
+          "products_requiring_gtd": [],
+          "products_requiring_country": [],
+          "products_requiring_mandatory_mark": [],
+          "products_requiring_imei": []
+        },
+        "tariffication": [
+          {
+            "current_tariff_rate": 0,
+            "current_tariff_type": "",
+            "current_tariff_charge": "",
+            "current_tariff_charge_currency_code": "",
+            "next_tariff_rate": 0,
+            "next_tariff_type": "",
+            "next_tariff_charge": "",
+            "next_tariff_starts_at": "2023-11-13T08:05:57.657Z",
+            "next_tariff_charge_currency_code": ""
+          }
+        ]
+      }
+    ],
+    "has_next": true
+  }
+}
+响应参数描述
+has_next	
+boolean
+响应中未返回整个货运数组的标志:
+
+true — 必须提出含其他值 offset的新请求，以获得其他货运信息；
+false — 响应中返回了在请求中提出的整个用于过滤的货运数组。
+postings	
+Array of objects
+货运信息。
+
+Array ()
+addressee	
+object
+收件人联系方式。
+
+analytics_data	
+object
+分析数据。
+
+available_actions	
+Array of strings
+可用的操作和货件信息包括：
+
+arbitration — 提出争议；
+awaiting_delivery — 转为“等待发运”状态；
+can_create_chat — 与买家开启聊天；
+cancel — 取消货件；
+click_track_number — 在个人中心通过追踪号查看状态历史；
+customer_phone_available — 获取买家电话号码；
+has_weight_products — 货件中包含以重量结算；
+hide_region_and_city — 在报告中隐藏买家的地区和城市；
+invoice_get — 获取发票信息；
+invoice_send — 创建发票；
+invoice_update — 编辑发票；
+label_download_big — 下载大标签；
+label_download_small — 下载小标签；
+label_download — 下载标签；
+non_int_delivered — 转为“可能已收”状态；
+non_int_delivering — 转为“运输中”状态；
+non_int_last_mile — 转为“快递员派件中”状态；
+product_cancel — 取消部分货件中的商品；
+set_cutoff — 需要指定发货日期，请使用方法/v1/posting/cutoff/set；
+set_timeslot — 修改买家的送货时间；
+set_track_number — 指定或更改追踪号；
+ship_async_in_process — 货件备货中；
+ship_async_retry — 发生错误后重新发货；
+ship_async — 备货货件；
+ship_with_additional_info — 需要填写额外信息；
+ship — 备货货件;
+update_cis — 修改附加信息。
+barcodes	
+object
+货件条码。
+
+cancellation	
+object
+取消原因。
+
+customer	
+object
+买家信息。
+
+delivering_date	
+string <date-time>
+货件交付物流的时间。
+
+delivery_method	
+object
+快递方式。
+
+financial_data	
+object
+有关商品成本、折扣幅度、付款和佣金的信息。
+
+in_process_at	
+string <date-time>
+开始处理货件的日期和时间。
+
+is_express	
+boolean
+如果使用快速物流 Ozon Express —— true。
+
+legal_info	
+object
+买方的法律信息。
+
+optional	
+object
+带有附加特征的商品列表。
+
+order_id	
+integer <int64>
+货件所属订单的ID。
+
+order_number	
+string
+货件所属的订单号。
+
+parent_posting_number	
+string
+快递母件编号，从该母件中拆分出了当前货件。
+
+posting_number	
+string
+货件号。
+
+products	
+Array of objects
+货运商品列表。
+
+requirements	
+object
+需提供制造国、货运报关单号、商品批次登记号、“诚实标志”、其他标识或重量的商品列表，以便将货件状态更新至下一阶段。
+
+shipment_date	
+string <date-time>
+必须收取货件的日期和时间。 超出该时间后将适用新费率，相关信息请查看字段 tariffication。
+
+shipment_date_without_delay	
+string <date-time>
+不逾期发运日期和时间。
+
+status	
+string
+货运状态:
+
+acceptance_in_progress —— 正在验收，
+arbitration —— 仲裁，
+awaiting_approve —— 等待确认，
+awaiting_deliver —— 等待装运，
+awaiting_packaging —— 等待包装，
+awaiting_registration —— 等待注册，
+awaiting_verification —— 已创建，
+cancelled —— 已取消，
+cancelled_from_split_pending——因货件拆分而取消，
+client_arbitration —— 快递客户仲裁，
+delivering —— 运输中，
+driver_pickup —— 司机处，
+not_accepted —— 分拣中心未接受，
+substatus	
+string
+发货子状态：
+
+posting_acceptance_in_progress —— 正在验收，
+posting_in_arbitration —— 仲裁，
+posting_created —— 已创建，
+posting_in_carriage —— 在运输途中，
+posting_not_in_carriage —— 未在运输中，
+posting_registered —— 已登记，
+posting_transferring_to_delivery (status=awaiting_deliver) —— 移交给快递，
+posting_awaiting_passport_data —— 等待护照资料，
+posting_created —— 已创建，
+posting_awaiting_registration —— 等待注册，
+posting_registration_error —— 注册错误，
+posting_transferring_to_delivery (status=awaiting_registration) —— 交给快递员,
+posting_split_pending —— 已创建，
+posting_canceled —— 已取消，
+posting_in_client_arbitration —— 快递会员仲裁，
+posting_delivered —— 已送达，
+posting_received —— 已收到，
+posting_conditionally_delivered —— 暂时送到，
+posting_in_courier_service —— 快递员正在路上，
+posting_in_pickup_point —— 在取货点，
+posting_on_way_to_city —— 发往城市途中，
+posting_on_way_to_pickup_point —— 正发往取货点，
+posting_returned_to_warehouse —— 返回仓库，
+posting_transferred_to_courier_service —— 转交给快递员，
+posting_driver_pick_up —— 在司机那儿，
+posting_not_in_sort_center —— 集散中心未收到，
+ship_failed —— 备货失败。
+tpl_integration_type	
+string
+快递服务集成类型：
+
+ozon —— Ozon 快递服务。
+3pl_tracking —— 集成服务快递。
+non_integrated —— 第三方物流服务。
+aggregator —— 通过Ozon合作物流伙伴交付。
+hybryd—— 俄罗斯邮政配送方案。
+tracking_number	
+string
+货件跟踪号。
+
+tariffication	
+object
+发运的计费信息。
+
