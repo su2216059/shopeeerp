@@ -51,6 +51,7 @@ public class OzonAdapter implements PlatformAdapter {
     private static final String POSTING_LIST_URL = OZON_API_BASE_URL + "/v3/posting/fbs/list";
     private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
     private static final String CASHFLOW_URL = OZON_API_BASE_URL + "/v1/finance/cash-flow-statement/list";
+    private static final String TRANSACTION_URL = OZON_API_BASE_URL + "/v3/finance/transaction/list";
 
     private static final Logger log = LoggerFactory.getLogger(OzonAdapter.class);
 
@@ -464,6 +465,53 @@ public class OzonAdapter implements PlatformAdapter {
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * 按 posting_number 拉取财务交易列表（利润/费用）
+     */
+    public List<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.Operation> fetchTransactions(String postingNumber, String from, String to, int pageSize) {
+        List<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.Operation> operations = new ArrayList<>();
+        int page = 1;
+        int totalPages = 1;
+        int size = pageSize > 0 ? pageSize : 100;
+
+        do {
+            com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest req = new com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest();
+            com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest.Filter filter = new com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest.Filter();
+            filter.setPostingNumber(postingNumber);
+            if (from != null || to != null) {
+                com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest.DateRange range = new com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest.DateRange();
+                range.setFrom(from);
+                range.setTo(to);
+                filter.setDate(range);
+            }
+            req.setFilter(filter);
+            req.setPage(page);
+            req.setPageSize(size);
+
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest> entity = new HttpEntity<>(req, headers);
+
+            ResponseEntity<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse> resp = restTemplate.exchange(
+                    TRANSACTION_URL,
+                    HttpMethod.POST,
+                    entity,
+                    com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.class
+            );
+            if (resp.getStatusCode() == HttpStatus.OK && resp.getBody() != null && resp.getBody().getResult() != null) {
+                com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.Result result = resp.getBody().getResult();
+                if (result.getOperations() != null) {
+                    operations.addAll(result.getOperations());
+                }
+                totalPages = result.getPageCount() != null ? result.getPageCount() : 1;
+            } else {
+                break;
+            }
+            page++;
+        } while (page <= totalPages);
+
+        return operations;
     }
 
     @Override
