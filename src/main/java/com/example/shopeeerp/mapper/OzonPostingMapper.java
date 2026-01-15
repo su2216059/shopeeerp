@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.OzonPosting;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper
@@ -18,6 +19,10 @@ public interface OzonPostingMapper {
     int insertBatch(@Param("list") List<OzonPosting> postings);
 
     int update(OzonPosting posting);
+
+    int updatePurchaseAmount(@Param("postingNumber") String postingNumber,
+                             @Param("purchaseAmount") BigDecimal purchaseAmount,
+                             @Param("updatedAt") java.time.LocalDateTime updatedAt);
 
     int deleteByPostingNumber(@Param("postingNumber") String postingNumber);
 

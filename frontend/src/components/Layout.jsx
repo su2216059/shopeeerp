@@ -57,8 +57,6 @@ const Layout = ({ children }) => {
       icon: <ShoppingCartOutlined />,
       label: '订单管理',
       children: [
-        { key: '/orders', label: '订单列表' },
-        { key: '/order-items', label: '订单项' },
         { key: '/ozon/orders', label: 'Ozon订单' },
         { key: '/payments', label: '支付记录' },
         { key: '/invoices', label: '发票管理' },
@@ -95,8 +93,6 @@ const Layout = ({ children }) => {
     if (path.startsWith('/inventory')) return ['/inventory']
     if (path.startsWith('/warehouses')) return ['/warehouses']
     if (path.startsWith('/ozon/orders')) return ['/ozon/orders']
-    if (path.startsWith('/orders')) return ['/orders']
-    if (path.startsWith('/order-items')) return ['/order-items']
     if (path.startsWith('/payments')) return ['/payments']
     if (path.startsWith('/invoices')) return ['/invoices']
     if (path.startsWith('/sales-data')) return ['/sales-data']

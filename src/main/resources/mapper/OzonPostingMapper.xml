@@ -34,6 +34,7 @@
         <result column="available_actions" property="availableActions" jdbcType="LONGVARCHAR"/>
         <result column="last_changed_at" property="lastChangedAt" jdbcType="TIMESTAMP"/>
         <result column="raw_payload" property="rawPayload" jdbcType="LONGVARCHAR"/>
+        <result column="purchase_amount" property="purchaseAmount" jdbcType="DECIMAL"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -43,7 +44,7 @@
         delivery_method_id, delivery_method_name, warehouse_id, warehouse_name, tpl_provider_id, tpl_provider_name,
         tracking_number, in_process_at, shipment_date, shipment_date_without_delay, delivering_date, is_express,
         customer_json, addressee_json, barcodes_json, analytics_json, financial_json, optional_json, cancellation_json,
-        requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, created_at, updated_at
+        requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, purchase_amount, created_at, updated_at
     </sql>
 
     <select id="selectAll" resultMap="BaseResultMap">
@@ -60,13 +61,13 @@
             delivery_method_id, delivery_method_name, warehouse_id, warehouse_name, tpl_provider_id, tpl_provider_name,
             tracking_number, in_process_at, shipment_date, shipment_date_without_delay, delivering_date, is_express,
             customer_json, addressee_json, barcodes_json, analytics_json, financial_json, optional_json, cancellation_json,
-            requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, created_at, updated_at
+            requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, purchase_amount, created_at, updated_at
         ) VALUES (
             #{postingNumber}, #{shopId}, #{orderId}, #{orderNumber}, #{status}, #{substatus}, #{tplIntegrationType},
             #{deliveryMethodId}, #{deliveryMethodName}, #{warehouseId}, #{warehouseName}, #{tplProviderId}, #{tplProviderName},
             #{trackingNumber}, #{inProcessAt}, #{shipmentDate}, #{shipmentDateWithoutDelay}, #{deliveringDate}, #{isExpress},
             #{customerJson}, #{addresseeJson}, #{barcodesJson}, #{analyticsJson}, #{financialJson}, #{optionalJson}, #{cancellationJson},
-            #{requirementsJson}, #{tarifficationJson}, #{availableActions}, #{lastChangedAt}, #{rawPayload}, #{createdAt}, #{updatedAt}
+            #{requirementsJson}, #{tarifficationJson}, #{availableActions}, #{lastChangedAt}, #{rawPayload}, COALESCE(#{purchaseAmount}, 0), #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -76,7 +77,7 @@
             delivery_method_id, delivery_method_name, warehouse_id, warehouse_name, tpl_provider_id, tpl_provider_name,
             tracking_number, in_process_at, shipment_date, shipment_date_without_delay, delivering_date, is_express,
             customer_json, addressee_json, barcodes_json, analytics_json, financial_json, optional_json, cancellation_json,
-            requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, created_at, updated_at
+            requirements_json, tariffication_json, available_actions, last_changed_at, raw_payload, purchase_amount, created_at, updated_at
         ) VALUES
         <foreach collection="list" item="item" separator=",">
             (
@@ -84,7 +85,7 @@
                 #{item.deliveryMethodId}, #{item.deliveryMethodName}, #{item.warehouseId}, #{item.warehouseName}, #{item.tplProviderId}, #{item.tplProviderName},
                 #{item.trackingNumber}, #{item.inProcessAt}, #{item.shipmentDate}, #{item.shipmentDateWithoutDelay}, #{item.deliveringDate}, #{item.isExpress},
                 #{item.customerJson}, #{item.addresseeJson}, #{item.barcodesJson}, #{item.analyticsJson}, #{item.financialJson}, #{item.optionalJson}, #{item.cancellationJson},
-                #{item.requirementsJson}, #{item.tarifficationJson}, #{item.availableActions}, #{item.lastChangedAt}, #{item.rawPayload}, #{item.createdAt}, #{item.updatedAt}
+                #{item.requirementsJson}, #{item.tarifficationJson}, #{item.availableActions}, #{item.lastChangedAt}, #{item.rawPayload}, COALESCE(#{item.purchaseAmount}, 0), #{item.createdAt}, #{item.updatedAt}
             )
         </foreach>
     </insert>
@@ -121,6 +122,14 @@
             available_actions = #{availableActions},
             last_changed_at = #{lastChangedAt},
             raw_payload = #{rawPayload},
+            purchase_amount = COALESCE(#{purchaseAmount}, purchase_amount),
+            updated_at = #{updatedAt}
+        WHERE posting_number = #{postingNumber}
+    </update>
+
+    <update id="updatePurchaseAmount">
+        UPDATE ozon_posting SET
+            purchase_amount = #{purchaseAmount},
             updated_at = #{updatedAt}
         WHERE posting_number = #{postingNumber}
     </update>

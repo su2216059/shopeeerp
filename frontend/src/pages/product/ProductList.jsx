@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Table, message, Image, Button, Space } from 'antd'
+import { Table, message, Image, Button, Space, Select } from 'antd'
 import { ozonProductApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
 
@@ -24,6 +24,7 @@ const ProductList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [visibility, setVisibility] = useState('ALL')
 
   useEffect(() => {
     fetchData()
@@ -44,7 +45,7 @@ const ProductList = () => {
   const handleSync = async () => {
     setSyncing(true)
     try {
-      const res = await ozonProductApi.sync()
+      const res = await ozonProductApi.sync({ visibility })
       const msg = res?.message || '同步任务已启动，请稍后刷新列表'
       message.success(msg)
       fetchData()
@@ -198,6 +199,18 @@ const ProductList = () => {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>Ozon 商品列表</h1>
         <Space>
+          <Select
+            value={visibility}
+            onChange={(value) => setVisibility(value)}
+            style={{ width: 180 }}
+            options={[
+              { value: 'ALL', label: '全部' },
+              { value: 'VISIBLE', label: '在售' },
+              { value: 'ARCHIVED', label: '归档商品' },
+              { value: 'IN_SALE', label: '正在销售' },
+              { value: 'TO_SUPPLY', label: '准备出售' },
+            ]}
+          />
           <Button type="primary" loading={syncing} onClick={handleSync}>
             同步商品
           </Button>

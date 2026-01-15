@@ -9,6 +9,8 @@ public interface OzonProfitOperationService {
 
     OzonProfitOperation getByOperationId(Long operationId);
 
+    List<OzonProfitOperation> getByPostingNumbers(List<String> postingNumbers);
+
     boolean saveBatch(List<OzonProfitOperation> list);
 
     /**

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS ozon_posting (
     available_actions LONGTEXT,
     last_changed_at DATETIME,
     raw_payload LONGTEXT,
+    purchase_amount DECIMAL(16,2) NOT NULL DEFAULT 0,
     created_at DATETIME,
     updated_at DATETIME
 );

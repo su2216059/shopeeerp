@@ -35,6 +35,18 @@
         SELECT <include refid="Base_Column_List"/> FROM ozon_profit_operation WHERE operation_id = #{operationId}
     </select>
 
+    <select id="selectByPostingNumbers" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_profit_operation
+        <where>
+            <if test="postingNumbers != null and postingNumbers.size() > 0">
+                posting_number IN
+                <foreach collection="postingNumbers" item="pn" open="(" separator="," close=")">
+                    #{pn}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
     <delete id="deleteByDateRange">
         DELETE FROM ozon_profit_operation
         <where>

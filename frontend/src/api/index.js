@@ -34,13 +34,20 @@ export const productApi = {
 // Ozon 商品同步数据
 export const ozonProductApi = {
   list: () => request.get('/ozon/products'),
-  sync: () => request.get('/ozon/products/sync'),
+  sync: (params) => request.get('/ozon/products/sync', { params }),
 }
 
 // Ozon 订单同步数据
 export const ozonOrderApi = {
-  list: () => request.get('/ozon/orders'),
+  list: (params) => request.get('/ozon/orders', { params }),
   sync: (params) => request.get('/ozon/orders/sync', { params }),
+  updatePurchaseAmount: (postingNumber, purchaseAmount) =>
+    request.put(`/ozon/orders/${encodeURIComponent(postingNumber)}/purchase-amount`, { purchaseAmount }),
+}
+
+// Ozon 财务（利润）同步
+export const ozonProfitApi = {
+  sync: (params) => request.post('/ozon/profit/sync', null, { params }),
 }
 
 // 订单相关API

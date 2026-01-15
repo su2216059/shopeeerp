@@ -12,6 +12,8 @@ public interface OzonProfitOperationMapper {
 
     OzonProfitOperation selectByOperationId(@Param("operationId") Long operationId);
 
+    List<OzonProfitOperation> selectByPostingNumbers(@Param("postingNumbers") List<String> postingNumbers);
+
     int insertBatch(@Param("list") List<OzonProfitOperation> list);
 
     int deleteByDateRange(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

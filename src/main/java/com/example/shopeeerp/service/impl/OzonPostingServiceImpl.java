@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -54,6 +55,16 @@ public class OzonPostingServiceImpl implements OzonPostingService {
 
     @Override
     @Transactional
+    public boolean updatePurchaseAmount(String postingNumber, BigDecimal purchaseAmount) {
+        if (postingNumber == null || postingNumber.trim().isEmpty()) {
+            return false;
+        }
+        BigDecimal normalized = purchaseAmount != null ? purchaseAmount : BigDecimal.ZERO;
+        return ozonPostingMapper.updatePurchaseAmount(postingNumber, normalized, LocalDateTime.now()) > 0;
+    }
+
+    @Override
+    @Transactional
     public boolean deleteByPostingNumber(String postingNumber) {
         return ozonPostingMapper.deleteByPostingNumber(postingNumber) > 0;
     }
@@ -72,6 +83,9 @@ public class OzonPostingServiceImpl implements OzonPostingService {
         }
         if (posting.getUpdatedAt() == null) {
             posting.setUpdatedAt(now);
+        }
+        if (posting.getPurchaseAmount() == null) {
+            posting.setPurchaseAmount(BigDecimal.ZERO);
         }
     }
 }

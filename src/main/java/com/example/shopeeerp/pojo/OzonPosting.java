@@ -37,6 +37,7 @@ public class OzonPosting {
     private String availableActions;
     private LocalDateTime lastChangedAt;
     private String rawPayload;
+    private java.math.BigDecimal purchaseAmount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -286,6 +287,14 @@ public class OzonPosting {
 
     public void setRawPayload(String rawPayload) {
         this.rawPayload = rawPayload;
+    }
+
+    public java.math.BigDecimal getPurchaseAmount() {
+        return purchaseAmount;
+    }
+
+    public void setPurchaseAmount(java.math.BigDecimal purchaseAmount) {
+        this.purchaseAmount = purchaseAmount;
     }
 
     public LocalDateTime getCreatedAt() {

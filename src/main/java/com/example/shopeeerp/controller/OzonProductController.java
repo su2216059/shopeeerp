@@ -12,10 +12,7 @@ import com.example.shopeeerp.service.OzonProductStatusService;
 import com.example.shopeeerp.service.OzonProductStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -72,7 +69,8 @@ public class OzonProductController {
      * 触发 Ozon 商品同步并返回同步条数
      */
     @GetMapping("/sync")
-    public ResponseEntity<Map<String, Object>> syncProducts() {
+    public ResponseEntity<Map<String, Object>> syncProducts(
+            @RequestParam(value = "visibility", required = false) String visibility) {
         Map<String, Object> result = new HashMap<>();
         if (!syncing.compareAndSet(false, true)) {
             result.put("success", false);
@@ -84,7 +82,11 @@ public class OzonProductController {
             PlatformAdapter adapter = platformAdapterFactory.getAdapter("ozon");
             CompletableFuture.runAsync(() -> {
                 try {
-                    adapter.fetchProducts();
+                    if (adapter instanceof com.example.shopeeerp.adapter.impl.OzonAdapter) {
+                        ((com.example.shopeeerp.adapter.impl.OzonAdapter) adapter).fetchProducts(visibility);
+                    } else {
+                        adapter.fetchProducts();
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {

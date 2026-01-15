@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { Table, message, Button, Space, DatePicker, Tag } from 'antd'
-import { ozonOrderApi } from '../../api'
+import React, { useEffect, useRef, useState } from 'react'
+import { Table, message, Button, Space, DatePicker, Tag, Image, Select, InputNumber } from 'antd'
+import { ozonOrderApi, ozonProfitApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
 
 const renderValue = (value) => {
@@ -29,11 +29,38 @@ const renderShort = (value, len = 10) => {
   )
 }
 
+const toNumber = (value) => {
+  if (value === null || value === undefined || value === '') return 0
+  const num = Number(value)
+  return Number.isNaN(num) ? 0 : num
+}
+
+const formatMoney = (value) => {
+  if (value === null || value === undefined || value === '') return '-'
+  const num = Number(value)
+  if (Number.isNaN(num)) return '-'
+  return num.toFixed(2)
+}
+
+const convertByRate = (value, rate) => {
+  const num = toNumber(value)
+  if (!rate || Number.isNaN(rate) || rate <= 0) {
+    return num
+  }
+  return num / rate
+}
+
 const OzonOrderList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [range, setRange] = useState([])
+  const [syncingProfit, setSyncingProfit] = useState(false)
+  const [searchRange, setSearchRange] = useState([])
+  const [searchStatus, setSearchStatus] = useState('')
+  const [selectedRowKeys, setSelectedRowKeys] = useState([])
+  const [selectedRows, setSelectedRows] = useState([])
+  const [exchangeRate, setExchangeRate] = useState(null)
+  const purchaseDraftsRef = useRef({})
 
   const statusDict = {
     awaiting_registration: '等待注册',
@@ -111,12 +138,44 @@ const OzonOrderList = () => {
 
   useEffect(() => {
     fetchData()
+    loadExchangeRate()
   }, [])
 
-  const fetchData = async () => {
+  const loadExchangeRate = async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const cacheKey = 'ozonRubRate'
+    try {
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed?.date === today && parsed?.rate > 0) {
+          setExchangeRate(parsed.rate)
+          return
+        }
+      }
+    } catch (e) {
+      // ignore cache errors
+    }
+
+    try {
+      const response = await fetch('https://open.er-api.com/v6/latest/CNY')
+      const data = await response.json()
+      const rate = data?.rates?.RUB
+      if (rate && rate > 0) {
+        setExchangeRate(rate)
+        localStorage.setItem(cacheKey, JSON.stringify({ date: today, rate }))
+        return
+      }
+    } catch (e) {
+      // ignore fetch errors
+    }
+    setExchangeRate(null)
+  }
+
+  const fetchData = async (params = {}) => {
     setLoading(true)
     try {
-      const result = await ozonOrderApi.list()
+      const result = await ozonOrderApi.list(params)
       setData(result || [])
     } catch (error) {
       message.error('加载数据失败')
@@ -128,12 +187,15 @@ const OzonOrderList = () => {
   const handleSync = async () => {
     setSyncing(true)
     try {
-      const start = range?.[0] ? range[0].toISOString() : undefined
-      const end = range?.[1] ? range[1].toISOString() : undefined
+      const start = searchRange?.[0] ? searchRange[0].toISOString() : undefined
+      const end = searchRange?.[1] ? searchRange[1].toISOString() : undefined
       const res = await ozonOrderApi.sync({ start, end })
       const msg = res?.message || '同步任务已启动，请稍后刷新列表'
       message.success(msg)
       fetchData()
+      setTimeout(() => {
+        window.location.reload()
+      }, 800)
     } catch (error) {
       const status = error?.response?.status
       const msg = error?.response?.data?.message
@@ -144,6 +206,66 @@ const OzonOrderList = () => {
       }
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const handleSyncProfit = async () => {
+    if (!selectedRows.length) {
+      message.warning('请先选择订单')
+      return
+    }
+    const orderIds = selectedRows
+      .map((row) => row?.orderId)
+      .filter((value) => value !== null && value !== undefined && value !== '')
+    if (!orderIds.length) {
+      message.warning('选中的订单没有可用的订单ID')
+      return
+    }
+    setSyncingProfit(true)
+    try {
+      const res = await ozonProfitApi.sync({ order_ids: orderIds.join(',') })
+      const msg = res?.message || '财务更新已触发，请稍后刷新'
+      message.success(msg)
+    } catch (error) {
+      const msg = error?.response?.data?.message
+      message.error(msg || '更新财务失败')
+    } finally {
+      setSyncingProfit(false)
+    }
+  }
+
+  const handleSearch = () => {
+    const created_from = searchRange?.[0] ? searchRange[0].toISOString() : undefined
+    const created_to = searchRange?.[1] ? searchRange[1].toISOString() : undefined
+    const status = searchStatus || undefined
+    fetchData({ created_from, created_to, status })
+  }
+
+  const handlePurchaseAmountChange = (postingNumber, value) => {
+    if (!postingNumber) return
+    const normalized = value === null || value === undefined ? 0 : value
+    purchaseDraftsRef.current[postingNumber] = normalized
+    setData((prev) =>
+      (prev || []).map((item) =>
+        item.postingNumber === postingNumber ? { ...item, purchaseAmount: normalized } : item
+      )
+    )
+  }
+
+  const handlePurchaseAmountSave = async (record) => {
+    const postingNumber = record?.postingNumber
+    if (!postingNumber) return
+    const draft = purchaseDraftsRef.current[postingNumber]
+    const normalized = toNumber(draft !== undefined ? draft : record.purchaseAmount)
+    try {
+      await ozonOrderApi.updatePurchaseAmount(postingNumber, normalized)
+      setData((prev) =>
+        (prev || []).map((item) =>
+          item.postingNumber === postingNumber ? { ...item, purchaseAmount: normalized } : item
+        )
+      )
+    } catch (error) {
+      message.error('保存采购金额失败')
     }
   }
 
@@ -163,28 +285,98 @@ const OzonOrderList = () => {
       render: (text) => renderShort(text),
     },
     {
+      title: '内容图片',
+      dataIndex: 'imageUrl',
+      key: 'imageUrl',
+      width: 140,
+      render: (_, record) => {
+        const url =
+          record.imageUrl ||
+          record.productImage ||
+          record.image ||
+          (record.images && record.images[0]) ||
+          null
+        return url ? <Image src={url} width={60} height={60} style={{ objectFit: 'cover' }} /> : '-'
+      },
+    },
+    {
+      title: '价格',
+      dataIndex: 'price',
+      key: 'price',
+      width: 120,
+      render: (text) => renderValue(text),
+    },
+    {
+      title: '\u91C7\u8D2D\u91D1\u989D',
+      dataIndex: 'purchaseAmount',
+      key: 'purchaseAmount',
+      width: 140,
+      render: (_, record) => (
+        <InputNumber
+          min={0}
+          precision={2}
+          value={toNumber(record.purchaseAmount)}
+          onChange={(value) => handlePurchaseAmountChange(record.postingNumber, value)}
+          onBlur={() => handlePurchaseAmountSave(record)}
+          style={{ width: 120 }}
+        />
+      ),
+    },
+    {
+      title: 'ozon税费',
+      key: 'ozonFees',
+      width: 520,
+      render: (_, record) => {
+        const parts = [
+          ['税费', record.ozonTaxFee],
+          ['销售额', formatMoney(convertByRate(record.ozonSalesAmount, exchangeRate))],
+          ['物流费', formatMoney(convertByRate(record.ozonLogisticsFee, exchangeRate))],
+          ['佣金', formatMoney(convertByRate(record.ozonCommission, exchangeRate))],
+          ['服务费', formatMoney(convertByRate(record.ozonServiceFee, exchangeRate))],
+          ['退款', formatMoney(convertByRate(record.ozonRefund, exchangeRate))],
+        ]
+        return (
+          <div style={{ lineHeight: '20px' }}>
+            {parts.map(([label, value], index) => (
+              <div key={label} style={{ whiteSpace: 'nowrap' }}>
+                {label}:{renderValue(value)}
+              </div>
+            ))}
+          </div>
+        )
+      },
+    },
+    {
+      title: '\u5229\u6DA6',
+      key: 'profit',
+      width: 120,
+      render: (_, record) => {
+        const profit =
+          convertByRate(record.ozonSalesAmount, exchangeRate) +
+          convertByRate(record.ozonLogisticsFee, exchangeRate) +
+          convertByRate(record.ozonCommission, exchangeRate) +
+          convertByRate(record.ozonServiceFee, exchangeRate) +
+          convertByRate(record.ozonRefund, exchangeRate) -
+          toNumber(record.purchaseAmount)
+        return formatMoney(profit)
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 140,
-      render: (text, record) => (
-        <Space>
-          {text ? (
-            <Tag color="blue">
-              {statusDict[text] ? `${statusDict[text]} (${text})` : text}
-            </Tag>
-          ) : (
-            '-'
-          )}
-          {record.substatus ? (
-            <Tag color="gold">
-              {substatusDict[record.substatus]
-                ? `${substatusDict[record.substatus]} (${record.substatus})`
-                : record.substatus}
-            </Tag>
-          ) : null}
-        </Space>
-      ),
+      render: (text, record) => {
+        const statusLabel = statusDict[text]
+        const subLabel = substatusDict[record.substatus]
+        const showSub = subLabel && subLabel !== statusLabel
+        return (
+          <Space>
+            {statusLabel ? <Tag color="blue">{statusLabel}</Tag> : '-'}
+            {showSub ? <Tag color="gold">{subLabel}</Tag> : null}
+          </Space>
+        )
+      },
     },
     {
       title: '追踪号',
@@ -286,15 +478,34 @@ const OzonOrderList = () => {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>Ozon 订单列表</h1>
         <Space>
-          <DatePicker.RangePicker
-            showTime
-            value={range}
-            onChange={(v) => setRange(v || [])}
-            placeholder={['开始时间', '结束时间']}
-          />
           <Button type="primary" loading={syncing} onClick={handleSync}>
             同步订单
           </Button>
+          <Button loading={syncingProfit} onClick={handleSyncProfit}>
+            更新财务
+          </Button>
+        </Space>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <DatePicker.RangePicker
+            showTime
+            value={searchRange}
+            onChange={(v) => setSearchRange(v || [])}
+            placeholder={['订单创建开始时间', '订单创建结束时间']}
+          />
+          <Select
+            allowClear
+            placeholder="订单状态"
+            value={searchStatus || undefined}
+            onChange={(value) => setSearchStatus(value || '')}
+            style={{ width: 200 }}
+            options={Object.keys(statusDict).map((key) => ({
+              value: key,
+              label: statusDict[key] || key,
+            }))}
+          />
+          <Button onClick={handleSearch}>搜索</Button>
         </Space>
       </div>
       <Table
@@ -302,8 +513,15 @@ const OzonOrderList = () => {
         dataSource={data}
         rowKey="postingNumber"
         loading={loading}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys, rows) => {
+            setSelectedRowKeys(keys)
+            setSelectedRows(rows || [])
+          },
+        }}
         pagination={{ pageSize: 10 }}
-        scroll={{ x: 1600 }}
+        scroll={{ x: 1900 }}
       />
     </div>
   )

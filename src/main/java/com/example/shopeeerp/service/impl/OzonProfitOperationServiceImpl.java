@@ -22,6 +22,14 @@ public class OzonProfitOperationServiceImpl implements OzonProfitOperationServic
     }
 
     @Override
+    public List<OzonProfitOperation> getByPostingNumbers(List<String> postingNumbers) {
+        if (postingNumbers == null || postingNumbers.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return mapper.selectByPostingNumbers(postingNumbers);
+    }
+
+    @Override
     @Transactional
     public boolean saveBatch(List<OzonProfitOperation> list) {
         if (list == null || list.isEmpty()) {

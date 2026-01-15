@@ -73,6 +73,12 @@ public class OzonAdapter implements PlatformAdapter {
     @Value("${ozon.http.retry-backoff-ms:1000}")
     private long cashflowRetryBackoffMs;
 
+    @Value("${ozon.http.detail-max-retries:2}")
+    private int detailMaxRetries;
+
+    @Value("${ozon.http.detail-retry-backoff-ms:1000}")
+    private long detailRetryBackoffMs;
+
     /**
      * 默认店铺ID，避免 posting.shop_id 外键约束失败；多店铺时请注入实际店铺ID
      */
@@ -516,8 +522,13 @@ public class OzonAdapter implements PlatformAdapter {
 
     @Override
     public List<PlatformProduct> fetchProducts() {
+        return fetchProducts(null);
+    }
+
+    public List<PlatformProduct> fetchProducts(String visibility) {
         try {
-            List<OzonProductListResponse.Item> productListItems = fetchProductList();
+            String visibilityValue = normalizeVisibility(visibility);
+            List<OzonProductListResponse.Item> productListItems = fetchProductList(visibilityValue);
             if (productListItems == null || productListItems.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -531,7 +542,7 @@ public class OzonAdapter implements PlatformAdapter {
                 return new ArrayList<>();
             }
 
-            List<OzonProductInfoResponse.ProductInfo> productDetails = fetchProductDetails(productIds);
+            List<OzonProductInfoResponse.ProductInfo> productDetails = fetchProductDetails(productIds, visibilityValue);
 
             List<PlatformProduct> platformProducts = productListItems.stream()
                     .map(this::convertToPlatformProduct)
@@ -552,39 +563,57 @@ public class OzonAdapter implements PlatformAdapter {
     /**
      * 获取商品列表
      */
-    private List<OzonProductListResponse.Item> fetchProductList() {
+    private List<OzonProductListResponse.Item> fetchProductList(String visibility) {
         try {
-            OzonProductListRequest request = new OzonProductListRequest();
-            OzonProductListRequest.Filter filter = new OzonProductListRequest.Filter();
-            filter.setOffer_id(Collections.emptyList());
-            filter.setProduct_id(Collections.emptyList());
-            filter.setVisibility("ALL");
-            request.setFilter(filter);
-            request.setLast_id("");
-            request.setLimit(1000);
+            List<OzonProductListResponse.Item> allItems = new ArrayList<>();
+            String lastId = "";
+            boolean hasNext = true;
+            int limit = 100;
+            String visibilityValue = visibility != null && !visibility.trim().isEmpty() ? visibility : "ALL";
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Client-Id", clientId);
-            headers.set("Api-Key", apiKey);
+            while (hasNext) {
+                OzonProductListRequest request = new OzonProductListRequest();
+                OzonProductListRequest.Filter filter = new OzonProductListRequest.Filter();
+                filter.setOffer_id(Collections.emptyList());
+                filter.setProduct_id(Collections.emptyList());
+                filter.setVisibility(visibilityValue);
+                request.setFilter(filter);
+                request.setLast_id(lastId);
+                request.setLimit(limit);
 
-            HttpEntity<OzonProductListRequest> entity = new HttpEntity<>(request, headers);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("Client-Id", clientId);
+                headers.set("Api-Key", apiKey);
 
-            ResponseEntity<OzonProductListResponse> response = restTemplate.exchange(
-                    PRODUCT_LIST_URL,
-                    HttpMethod.POST,
-                    entity,
-                    OzonProductListResponse.class
-            );
+                HttpEntity<OzonProductListRequest> entity = new HttpEntity<>(request, headers);
 
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                OzonProductListResponse.Result result = response.getBody().getResult();
-                if (result != null && result.getItems() != null) {
-                    return result.getItems();
+                ResponseEntity<OzonProductListResponse> response = restTemplate.exchange(
+                        PRODUCT_LIST_URL,
+                        HttpMethod.POST,
+                        entity,
+                        OzonProductListResponse.class
+                );
+
+                if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                    OzonProductListResponse.Result result = response.getBody().getResult();
+                    if (result != null && result.getItems() != null && !result.getItems().isEmpty()) {
+                        allItems.addAll(result.getItems());
+                    } else {
+                        break;
+                    }
+                    String nextLastId = result != null ? result.getLast_id() : null;
+                    if (nextLastId == null || nextLastId.trim().isEmpty() || nextLastId.equals(lastId)) {
+                        hasNext = false;
+                    } else {
+                        lastId = nextLastId;
+                    }
+                } else {
+                    break;
                 }
             }
 
-            return new ArrayList<>();
+            return allItems;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -594,26 +623,39 @@ public class OzonAdapter implements PlatformAdapter {
     /**
      * 批量获取商品详情
      */
-    private List<OzonProductInfoResponse.ProductInfo> fetchProductDetails(List<String> productIds) {
+    private List<OzonProductInfoResponse.ProductInfo> fetchProductDetails(List<String> productIds, String visibility) {
         if (productIds == null || productIds.isEmpty()) {
             return new ArrayList<>();
         }
 
         List<OzonProductInfoResponse.ProductInfo> allProductDetails = new ArrayList<>();
 
-        // 每批最多 1000
-        int batchSize = 1000;
+        // 每批最多 100，减少超时概率
+        int batchSize = 100;
         for (int i = 0; i < productIds.size(); i += batchSize) {
             int end = Math.min(i + batchSize, productIds.size());
             List<String> batch = productIds.subList(i, end);
 
-            try {
-                List<OzonProductInfoResponse.ProductInfo> batchDetails = fetchProductInfo(batch);
-                if (batchDetails != null) {
-                    allProductDetails.addAll(batchDetails);
+            int attempt = 0;
+            int maxAttempts = Math.max(detailMaxRetries, 0) + 1;
+            boolean fetched = false;
+            while (!fetched && attempt < maxAttempts) {
+                try {
+                    List<OzonProductInfoResponse.ProductInfo> batchDetails = fetchProductInfo(batch, visibility, batchSize, null, "ASC");
+                    if (batchDetails != null) {
+                        allProductDetails.addAll(batchDetails);
+                    }
+                    fetched = true;
+                } catch (Exception e) {
+                    attempt++;
+                    if (attempt >= maxAttempts) {
+                        e.printStackTrace();
+                        break;
+                    }
+                    long delay = Math.max(detailRetryBackoffMs, 0L) * attempt;
+                    log.warn("Ozon product detail batch failed (attempt {}/{}). Retrying in {} ms", attempt, maxAttempts, delay);
+                    sleepQuietly(delay);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -707,6 +749,23 @@ public class OzonAdapter implements PlatformAdapter {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private String normalizeVisibility(String visibility) {
+        if (visibility == null || visibility.trim().isEmpty()) {
+            return "ALL";
+        }
+        String value = visibility.trim().toUpperCase();
+        switch (value) {
+            case "VISIBLE":
+            case "ARCHIVED":
+            case "IN_SALE":
+            case "TO_SUPPLY":
+            case "ALL":
+                return value;
+            default:
+                return "ALL";
         }
     }
 
