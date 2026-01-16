@@ -46,6 +46,15 @@ public class OzonProductServiceImpl implements OzonProductService {
     }
 
     @Override
+    public List<OzonProduct> getByFilters(String title,
+                                          String productCode,
+                                          LocalDateTime createdFrom,
+                                          LocalDateTime createdTo,
+                                          String visibility) {
+        return ozonProductMapper.selectByFilters(title, productCode, createdFrom, createdTo, visibility);
+    }
+
+    @Override
     public List<OzonProduct> getByPage(int pageNum, int pageSize) {
         // 这里可以实现分页逻辑，暂时返回所有数据
         return getAll();

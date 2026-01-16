@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Table, message, Image, Button, Space, Select } from 'antd'
+import { Table, message, Image, Button, Space, Select, Input, DatePicker, Tabs } from 'antd'
 import { ozonProductApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
 
@@ -24,21 +24,40 @@ const ProductList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [visibility, setVisibility] = useState('ALL')
+  const [visibility, setVisibility] = useState('MODERATED')
+  const [listVisibility, setListVisibility] = useState('IN_SALE')
+  const [searchTitle, setSearchTitle] = useState('')
+  const [searchProductCode, setSearchProductCode] = useState('')
+  const [searchRange, setSearchRange] = useState([])
 
   useEffect(() => {
-    fetchData()
+    fetchData(buildQueryParams({ visibility: listVisibility }))
   }, [])
 
-  const fetchData = async () => {
+  const fetchData = async (params = {}) => {
     setLoading(true)
     try {
-      const result = await ozonProductApi.list()
+      const result = await ozonProductApi.list(params)
       setData(result || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const buildQueryParams = (overrides = {}) => {
+    const created_from = searchRange?.[0] ? searchRange[0].toISOString() : undefined
+    const created_to = searchRange?.[1] ? searchRange[1].toISOString() : undefined
+    const title = searchTitle?.trim() || undefined
+    const product_code = searchProductCode?.trim() || undefined
+    return {
+      title,
+      product_code,
+      created_from,
+      created_to,
+      visibility: listVisibility,
+      ...overrides,
     }
   }
 
@@ -48,7 +67,7 @@ const ProductList = () => {
       const res = await ozonProductApi.sync({ visibility })
       const msg = res?.message || '同步任务已启动，请稍后刷新列表'
       message.success(msg)
-      fetchData()
+      fetchData(buildQueryParams())
     } catch (error) {
       const status = error?.response?.status
       const msg = error?.response?.data?.message
@@ -60,6 +79,29 @@ const ProductList = () => {
     } finally {
       setSyncing(false)
     }
+  }
+
+  const handleSearch = () => {
+    fetchData(buildQueryParams())
+  }
+
+  const handleReset = () => {
+    setSearchTitle('')
+    setSearchProductCode('')
+    setSearchRange([])
+    fetchData(
+      buildQueryParams({
+        title: undefined,
+        product_code: undefined,
+        created_from: undefined,
+        created_to: undefined,
+      })
+    )
+  }
+
+  const handleTabChange = (key) => {
+    setListVisibility(key)
+    fetchData(buildQueryParams({ visibility: key }))
   }
 
   const columns = [
@@ -176,7 +218,17 @@ const ProductList = () => {
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: renderValue,
+      render: (_, record) => {
+        const archived = record?.archived || record?.autoArchived
+        const stock = Number(record?.stock ?? 0)
+        if (archived) {
+          return '档案'
+        }
+        if (stock > 0) {
+          return '在售'
+        }
+        return '准备出售'
+      },
     },
     {
       title: '创建时间',
@@ -204,16 +256,50 @@ const ProductList = () => {
             onChange={(value) => setVisibility(value)}
             style={{ width: 180 }}
             options={[
-              { value: 'ALL', label: '全部' },
-              { value: 'VISIBLE', label: '在售' },
-              { value: 'ARCHIVED', label: '归档商品' },
-              { value: 'IN_SALE', label: '正在销售' },
-              { value: 'TO_SUPPLY', label: '准备出售' },
+              { value: 'MODERATED', label: '全部' },
+              { value: 'IN_SALE', label: '在售' },
+              { value: 'VISIBLE', label: '可见' },
+              { value: 'ARCHIVED', label: '归档' },
+              { value: 'EMPTY_STOCK', label: '库存不足' },
             ]}
           />
           <Button type="primary" loading={syncing} onClick={handleSync}>
             同步商品
           </Button>
+        </Space>
+      </div>
+      <Tabs
+        activeKey={listVisibility}
+        onChange={handleTabChange}
+        items={[
+          { key: 'IN_SALE', label: '在售' },
+          { key: 'TO_SUPPLY', label: '准备出售' },
+          { key: 'ARCHIVED', label: '档案' },
+        ]}
+        style={{ marginBottom: 12 }}
+      />
+      <div style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <Input
+            placeholder="标题"
+            value={searchTitle}
+            onChange={(e) => setSearchTitle(e.target.value)}
+            style={{ width: 200 }}
+          />
+          <Input
+            placeholder="货号"
+            value={searchProductCode}
+            onChange={(e) => setSearchProductCode(e.target.value)}
+            style={{ width: 180 }}
+          />
+          <DatePicker.RangePicker
+            showTime
+            value={searchRange}
+            onChange={(value) => setSearchRange(value || [])}
+            placeholder={['创建开始时间', '创建结束时间']}
+          />
+          <Button onClick={handleSearch}>搜索</Button>
+          <Button onClick={handleReset}>重置</Button>
         </Space>
       </div>
       <Table

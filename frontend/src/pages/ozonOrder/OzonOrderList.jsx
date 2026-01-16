@@ -274,15 +274,8 @@ const OzonOrderList = () => {
       title: '货件号',
       dataIndex: 'postingNumber',
       key: 'postingNumber',
-      width: 180,
-      render: (text) => renderShort(text),
-    },
-    {
-      title: '订单号',
-      dataIndex: 'orderNumber',
-      key: 'orderNumber',
-      width: 160,
-      render: (text) => renderShort(text),
+      width: 260,
+      render: (text) => renderValue(text),
     },
     {
       title: '内容图片',

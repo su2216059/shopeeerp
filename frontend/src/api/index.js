@@ -33,7 +33,7 @@ export const productApi = {
 
 // Ozon 商品同步数据
 export const ozonProductApi = {
-  list: () => request.get('/ozon/products'),
+  list: (params) => request.get('/ozon/products', { params }),
   sync: (params) => request.get('/ozon/products/sync', { params }),
 }
 

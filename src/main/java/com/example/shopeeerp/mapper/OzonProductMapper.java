@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.OzonProduct;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -36,6 +37,15 @@ public interface OzonProductMapper {
      * 根据条件查询商品列表
      */
     List<OzonProduct> selectByCondition(OzonProduct condition);
+
+    /**
+     * 根据筛选条件查询商品列表
+     */
+    List<OzonProduct> selectByFilters(@Param("title") String title,
+                                      @Param("productCode") String productCode,
+                                      @Param("createdFrom") LocalDateTime createdFrom,
+                                      @Param("createdTo") LocalDateTime createdTo,
+                                      @Param("visibility") String visibility);
 
     /**
      * 插入商品

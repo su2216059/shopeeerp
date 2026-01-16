@@ -74,6 +74,55 @@
         ORDER BY id
     </select>
 
+    <!-- 根据筛选条件查询 -->
+    <select id="selectByFilters" resultMap="BaseResultMap">
+        SELECT DISTINCT p.*
+        FROM ozon_product p
+        LEFT JOIN ozon_product_status s ON s.product_id = p.id
+        LEFT JOIN (
+            SELECT product_id, COALESCE(SUM(present), 0) AS total_present
+            FROM ozon_product_stock
+            GROUP BY product_id
+        ) st ON st.product_id = p.id
+        <where>
+            <if test="title != null and title != ''">
+                AND LOWER(p.name) LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="productCode != null and productCode != ''">
+                AND LOWER(p.offer_id) LIKE CONCAT('%', #{productCode}, '%')
+            </if>
+            <if test="createdFrom != null">
+                AND p.created_at <![CDATA[>=]]> #{createdFrom}
+            </if>
+            <if test="createdTo != null">
+                AND p.created_at <![CDATA[<=]]> #{createdTo}
+            </if>
+            <if test="visibility != null and visibility != ''">
+                <choose>
+                    <when test="visibility == 'ARCHIVED'">
+                        AND (p.is_archived = 1 OR p.is_autoarchived = 1)
+                    </when>
+                    <when test="visibility == 'IN_SALE'">
+                        AND COALESCE(st.total_present, 0) > 0
+                        AND (p.is_archived IS NULL OR p.is_archived = 0)
+                        AND (p.is_autoarchived IS NULL OR p.is_autoarchived = 0)
+                        AND (s.status_description IS NULL OR LOWER(s.status_description) != 'Убран из продажи')
+                    </when>
+                    <when test="visibility == 'TO_SUPPLY'">
+                        AND COALESCE(st.total_present, 0) = 0
+                        AND (p.is_archived IS NULL OR p.is_archived = 0)
+                        AND (p.is_autoarchived IS NULL OR p.is_autoarchived = 0)
+                        AND (s.status_description IS NULL OR LOWER(s.status_description) != 'Убран из продажи')
+                    </when>
+                    <when test="visibility == 'EMPTY_STOCK'">
+                        AND COALESCE(st.total_present, 0) = 0
+                    </when>
+                </choose>
+            </if>
+        </where>
+        ORDER BY p.created_at
+    </select>
+
     <!-- 插入 -->
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonProduct">
         INSERT INTO ozon_product (

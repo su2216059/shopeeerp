@@ -2,6 +2,7 @@ package com.example.shopeeerp.service;
 
 import com.example.shopeeerp.pojo.OzonProduct;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -33,6 +34,15 @@ public interface OzonProductService {
      * 根据条件查询商品列表
      */
     List<OzonProduct> getByCondition(OzonProduct condition);
+
+    /**
+     * 根据筛选条件查询商品列表
+     */
+    List<OzonProduct> getByFilters(String title,
+                                   String productCode,
+                                   LocalDateTime createdFrom,
+                                   LocalDateTime createdTo,
+                                   String visibility);
 
     /**
      * 分页查询商品列表

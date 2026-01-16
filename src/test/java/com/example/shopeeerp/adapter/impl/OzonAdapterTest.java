@@ -31,7 +31,7 @@ class OzonAdapterTest {
     @BeforeEach
     void setUp() {
         restTemplate = org.mockito.Mockito.mock(RestTemplate.class);
-        adapter = new OzonAdapter(restTemplate, null, null, null);
+        adapter = new OzonAdapter(restTemplate, null, null, null,null);
         ReflectionTestUtils.setField(adapter, "cashflowMaxRetries", 0);
         ReflectionTestUtils.setField(adapter, "cashflowRetryBackoffMs", 0L);
         ReflectionTestUtils.setField(adapter, "clientId", "client");

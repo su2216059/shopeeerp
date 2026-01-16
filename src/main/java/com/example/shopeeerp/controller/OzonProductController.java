@@ -57,8 +57,24 @@ public class OzonProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OzonProductView>> list() {
-        List<OzonProduct> products = ozonProductService.getAll();
+    public ResponseEntity<List<OzonProductView>> list(
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "product_code", required = false) String productCode,
+            @RequestParam(value = "created_from", required = false) String createdFrom,
+            @RequestParam(value = "created_to", required = false) String createdTo,
+            @RequestParam(value = "visibility", required = false) String visibility) {
+        LocalDateTime from = parseDateTime(createdFrom);
+        LocalDateTime to = parseDateTime(createdTo);
+        String titleFilter = normalizeFilter(title);
+        String codeFilter = normalizeFilter(productCode);
+        String visibilityFilter = normalizeVisibilityFilter(visibility);
+        List<OzonProduct> products = ozonProductService.getByFilters(
+                titleFilter,
+                codeFilter,
+                from,
+                to,
+                visibilityFilter
+        );
         List<OzonProductView> result = products.stream()
                 .map(this::buildView)
                 .collect(Collectors.toList());
@@ -112,6 +128,7 @@ public class OzonProductController {
 
     private OzonProductView buildView(OzonProduct product) {
         OzonProductView view = new OzonProductView();
+        OzonProductStatus status = resolveStatusEntity(product.getId());
         view.setId(product.getId());
         view.setImageUrl(resolvePrimaryImage(product.getId()));
         view.setTitle(product.getName());
@@ -130,7 +147,11 @@ public class OzonProductController {
         view.setPrice(product.getPrice());
         view.setMinPrice(parseDecimal(product.getMinPrice()));
         view.setOldPrice(product.getOldPrice());
-        view.setStatus(resolveStatus(product.getId(), product.getIsArchived()));
+        view.setStatus(resolveStatusLabel(status, product.getIsArchived()));
+        view.setStatusCode(status != null ? status.getStatus() : null);
+        view.setModerateStatus(status != null ? status.getModerateStatus() : null);
+        view.setArchived(Boolean.TRUE.equals(product.getIsArchived()));
+        view.setAutoArchived(Boolean.TRUE.equals(product.getIsAutoarchived()));
         view.setCreatedAt(product.getCreatedAt());
         view.setUpdatedAt(product.getUpdatedAt());
         return view;
@@ -160,8 +181,18 @@ public class OzonProductController {
         }
     }
 
-    private String resolveStatus(Long productId, Boolean isArchived) {
-        OzonProductStatus status = ozonProductStatusService.getByProductId(productId);
+    private OzonProductStatus resolveStatusEntity(Long productId) {
+        if (ozonProductStatusService == null || productId == null) {
+            return null;
+        }
+        try {
+            return ozonProductStatusService.getByProductId(productId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String resolveStatusLabel(OzonProductStatus status, Boolean isArchived) {
         if (status != null) {
             if (status.getStatusName() != null && !status.getStatusName().isEmpty()) {
                 return status.getStatusName();
@@ -187,6 +218,95 @@ public class OzonProductController {
         }
     }
 
+    private String normalizeFilter(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed.toLowerCase();
+    }
+
+    private String normalizeVisibilityFilter(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toUpperCase();
+    }
+
+    private boolean matchesText(String value, String filter) {
+        if (filter == null) {
+            return true;
+        }
+        if (value == null) {
+            return false;
+        }
+        return value.toLowerCase().contains(filter);
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return java.time.OffsetDateTime.parse(value.trim(), java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                    .toLocalDateTime();
+        } catch (Exception ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value.trim(), java.time.format.DateTimeFormatter.ISO_DATE_TIME);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean matchesCreatedTime(OzonProduct product, LocalDateTime from, LocalDateTime to) {
+        if (from == null && to == null) {
+            return true;
+        }
+        if (product == null || product.getCreatedAt() == null) {
+            return false;
+        }
+        LocalDateTime createdAt = product.getCreatedAt();
+        if (from != null && createdAt.isBefore(from)) {
+            return false;
+        }
+        if (to != null && createdAt.isAfter(to)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean matchesVisibility(OzonProductView view, String visibility) {
+        if (visibility == null || visibility.isEmpty()) {
+            return true;
+        }
+        if (view == null) {
+            return false;
+        }
+        boolean archived = Boolean.TRUE.equals(view.getArchived()) || Boolean.TRUE.equals(view.getAutoArchived());
+        int stock = view.getStock() != null ? view.getStock() : 0;
+        if ("ARCHIVED".equals(visibility)) {
+            return archived;
+        }
+        if ("IN_SALE".equals(visibility)) {
+            return stock > 0 && !archived && !isPriceSent(view);
+        }
+        if ("TO_SUPPLY".equals(visibility)) {
+            return stock == 0 && !archived && !isPriceSent(view);
+        }
+        if ("EMPTY_STOCK".equals(visibility)) {
+            return stock == 0;
+        }
+        return true;
+    }
+
+    private boolean isPriceSent(OzonProductView view) {
+        if (view == null || view.getStatusCode() == null) {
+            return false;
+        }
+        return "price_sent".equalsIgnoreCase(view.getStatusCode());
+    }
+
     /**
      * 前端展示用视图模型。
      */
@@ -209,6 +329,10 @@ public class OzonProductController {
         private BigDecimal minPrice;
         private BigDecimal oldPrice;
         private String status;
+        private String statusCode;
+        private String moderateStatus;
+        private Boolean archived;
+        private Boolean autoArchived;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -354,6 +478,38 @@ public class OzonProductController {
 
         public void setStatus(String status) {
             this.status = status;
+        }
+
+        public String getStatusCode() {
+            return statusCode;
+        }
+
+        public void setStatusCode(String statusCode) {
+            this.statusCode = statusCode;
+        }
+
+        public String getModerateStatus() {
+            return moderateStatus;
+        }
+
+        public void setModerateStatus(String moderateStatus) {
+            this.moderateStatus = moderateStatus;
+        }
+
+        public Boolean getArchived() {
+            return archived;
+        }
+
+        public void setArchived(Boolean archived) {
+            this.archived = archived;
+        }
+
+        public Boolean getAutoArchived() {
+            return autoArchived;
+        }
+
+        public void setAutoArchived(Boolean autoArchived) {
+            this.autoArchived = autoArchived;
         }
 
         public LocalDateTime getCreatedAt() {

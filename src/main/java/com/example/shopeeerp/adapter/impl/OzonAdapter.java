@@ -10,9 +10,11 @@ import com.example.shopeeerp.pojo.OzonProduct;
 import com.example.shopeeerp.pojo.OzonPosting;
 import com.example.shopeeerp.pojo.OzonPostingItem;
 import com.example.shopeeerp.pojo.OzonProductStatus;
+import com.example.shopeeerp.pojo.OzonProductStock;
 import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
 import com.example.shopeeerp.service.OzonProductStatusService;
+import com.example.shopeeerp.service.OzonProductStockService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
@@ -59,6 +61,7 @@ public class OzonAdapter implements PlatformAdapter {
     private final OzonProductService ozonProductService;
     private final OzonProductImageService ozonProductImageService;
     private final OzonProductStatusService ozonProductStatusService;
+    private final OzonProductStockService ozonProductStockService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${ozon.api.client-id:}")
@@ -89,11 +92,13 @@ public class OzonAdapter implements PlatformAdapter {
     public OzonAdapter(RestTemplate restTemplate,
                        @Autowired(required = false) OzonProductService ozonProductService,
                        @Autowired(required = false) OzonProductImageService ozonProductImageService,
-                       @Autowired(required = false) OzonProductStatusService ozonProductStatusService) {
+                       @Autowired(required = false) OzonProductStatusService ozonProductStatusService,
+                       @Autowired(required = false) OzonProductStockService ozonProductStockService) {
         this.restTemplate = restTemplate != null ? restTemplate : new RestTemplate();
         this.ozonProductService = ozonProductService;
         this.ozonProductImageService = ozonProductImageService;
         this.ozonProductStatusService = ozonProductStatusService;
+        this.ozonProductStockService = ozonProductStockService;
     }
 
     @Override
@@ -569,7 +574,7 @@ public class OzonAdapter implements PlatformAdapter {
             String lastId = "";
             boolean hasNext = true;
             int limit = 100;
-            String visibilityValue = visibility != null && !visibility.trim().isEmpty() ? visibility : "ALL";
+            String visibilityValue = visibility != null && !visibility.trim().isEmpty() ? visibility : "MODERATED";
 
             while (hasNext) {
                 OzonProductListRequest request = new OzonProductListRequest();
@@ -663,11 +668,11 @@ public class OzonAdapter implements PlatformAdapter {
     }
 
     /**
-     * 获取商品详情信息（默认 ALL，可见性可选，limit 最大 1000）
-     * 可选 visibility：ALL / VISIBLE / TO_SUPPLY / IN_SALE / ARCHIVED
+     * 获取商品详情信息（默认 MODERATED，可见性可选，limit 最大 1000）
+     * 可选 visibility：MODERATED / VISIBLE / IN_SALE / ARCHIVED / EMPTY_STOCK
      */
     public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(List<String> productIds) {
-        return fetchProductInfo(productIds, "ALL", 1000, null, "ASC");
+        return fetchProductInfo(productIds, "MODERATED", 1000, null, "ASC");
     }
 
     /**
@@ -682,7 +687,7 @@ public class OzonAdapter implements PlatformAdapter {
         try {
             OzonProductInfoRequest request = new OzonProductInfoRequest();
             request.setProduct_id(productIds);
-            request.setVisibility(visibility != null ? visibility : "ALL");
+            request.setVisibility(visibility != null ? visibility : "MODERATED");
             int pageSize = (limit != null && limit > 0) ? Math.min(limit, 1000) : 1000;
             request.setLimit(pageSize);
             request.setLast_id(lastId != null ? lastId : "");
@@ -726,6 +731,7 @@ public class OzonAdapter implements PlatformAdapter {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        Date nowDate = new Date();
 
         for (OzonProductInfoResponse.ProductInfo productInfo : productDetails) {
             try {
@@ -746,26 +752,72 @@ public class OzonAdapter implements PlatformAdapter {
 
                 syncProductImages(productInfo);
                 syncProductStatus(productInfo, now);
+                syncProductStocks(productInfo, nowDate);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
+    private void syncProductStocks(OzonProductInfoResponse.ProductInfo productInfo, Date now) {
+        if (ozonProductStockService == null || productInfo == null) {
+            return;
+        }
+        OzonProductInfoResponse.Stocks stocksInfo = productInfo.getStocks();
+        if (stocksInfo == null || !Boolean.TRUE.equals(stocksInfo.getHas_stock())) {
+            return;
+        }
+        List<OzonProductInfoResponse.Stock> stocks = stocksInfo.getStocks();
+        if (stocks == null || stocks.isEmpty()) {
+            return;
+        }
+        Long productId = productInfo.getId();
+        for (OzonProductInfoResponse.Stock stock : stocks) {
+            if (stock == null) {
+                continue;
+            }
+            String source = stock.getSource();
+            if (source == null || source.trim().isEmpty()) {
+                continue;
+            }
+            OzonProductStock entity = new OzonProductStock();
+            entity.setProductId(productId);
+            entity.setSku(stock.getSku());
+            entity.setSource(source);
+            entity.setPresent(stock.getPresent() != null ? stock.getPresent() : 0);
+            entity.setReserved(stock.getReserved() != null ? stock.getReserved() : 0);
+
+            OzonProductStock existing = null;
+            if (productId != null) {
+                existing = ozonProductStockService.getByProductIdAndSource(productId, source);
+            }
+            if (existing != null && existing.getId() != null) {
+                entity.setId(existing.getId());
+                ozonProductStockService.update(entity);
+            } else {
+                entity.setCreatedAt(now);
+                entity.setUpdatedAt(now);
+                ozonProductStockService.save(entity);
+            }
+        }
+    }
+
     private String normalizeVisibility(String visibility) {
         if (visibility == null || visibility.trim().isEmpty()) {
-            return "ALL";
+            return "MODERATED";
         }
         String value = visibility.trim().toUpperCase();
         switch (value) {
+            case "MODERATED":
             case "VISIBLE":
             case "ARCHIVED":
             case "IN_SALE":
-            case "TO_SUPPLY":
-            case "ALL":
+            case "EMPTY_STOCK":
                 return value;
+            case "ALL":
+                return "MODERATED";
             default:
-                return "ALL";
+                return "MODERATED";
         }
     }
 
