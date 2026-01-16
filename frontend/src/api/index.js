@@ -104,7 +104,8 @@ export const inventoryApi = {
 
 // 仓库相关API
 export const warehouseApi = {
-  list: () => request.get('/warehouses'),
+  list: () => request.get('/ozon/warehouses'),
+  sync: () => request.post('/ozon/warehouses/sync'),
   getById: (id) => request.get(`/warehouses/${id}`),
   create: (data) => request.post('/warehouses', data),
   update: (id, data) => request.put(`/warehouses/${id}`, data),

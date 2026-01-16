@@ -1,0 +1,108 @@
+https://api-seller.ozon.ru/v1/warehouse/list
+请求范例
+{
+  "limit": 0,
+  "offset": 0
+}
+回复范例
+{
+  "result": [
+    {
+      "has_entrusted_acceptance": true,
+      "is_rfbs": true,
+      "name": "string",
+      "warehouse_id": 0,
+      "can_print_act_in_advance": true,
+      "first_mile_type": {
+        "dropoff_point_id": "string",
+        "dropoff_timeslot_id": 0,
+        "first_mile_is_changing": true,
+        "first_mile_type": "DropOff"
+      },
+      "has_postings_limit": true,
+      "is_karantin": true,
+      "is_kgt": true,
+      "is_timetable_editable": true,
+      "min_postings_limit": 0,
+      "postings_limit": 0,
+      "min_working_days": 0,
+      "status": "string",
+      "working_days": [
+        "1"
+      ]
+    }
+  ]
+}
+
+
+has_entrusted_acceptance	
+boolean
+会表明受信任的接受。true, 如果库存中启用了受信任的接受方式。
+
+is_rfbs	
+boolean
+在 rFBS 计划下运作的仓库的标志：
+
+true — 仓库在 rFBS 计划下运行；
+false — 仓库没有在 rFBS 计划下运行。
+name	
+string
+仓库名称。
+
+warehouse_id	
+integer <int64>
+仓库识别号。
+
+can_print_act_in_advance	
+boolean
+有可能提前打印收发证书。 true, 如果可以提前打印的话。
+
+first_mile_type	
+object
+第一英里 FBS。
+
+has_postings_limit	
+boolean
+该迹象表明对最小订单数有限制。true, 如果有限制。
+
+is_karantin	
+boolean
+该迹象表明仓库因隔离而停止运作。
+
+is_kgt	
+boolean
+该迹象表明仓库接受大宗商品。
+
+is_timetable_editable	
+boolean
+该迹象表明可以改变仓库运行时间表。
+
+min_postings_limit	
+integer <int32>
+限制的最小值是指在一次供货中可以带来的订单数量。
+
+postings_limit	
+integer <int32>
+极限值。 -1, 如果没有限制
+
+min_working_days	
+integer <int64>
+仓库运行天数。
+
+status	
+string
+仓库状况。
+
+仓库状态与个人账户中的状态的对应关系:
+
+状态 Seller API	个人账户中的状态
+new	正在激活
+created	已激活
+disabled	存档
+blocked	已封禁
+disabled_due_to_limit	暂停中
+error	错误
+working_days	
+Array of strings
+Items Enum: "1" "2" "3" "4" "5" "6" "7"
+仓库运行天数。

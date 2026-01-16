@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Popconfirm, message } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { Table, Button, message } from 'antd'
 import { warehouseApi } from '../../api'
 
 const WarehouseList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -19,19 +17,22 @@ const WarehouseList = () => {
       const result = await warehouseApi.list()
       setData(result || [])
     } catch (error) {
-      message.error('加载数据失败')
+      message.error('\u52a0\u8f7d\u6570\u636e\u5931\u8d25')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleSync = async () => {
+    setSyncing(true)
     try {
-      await warehouseApi.delete(id)
-      message.success('删除成功')
+      await warehouseApi.sync()
+      message.success('\u540c\u6b65\u4efb\u52a1\u5df2\u542f\u52a8')
       fetchData()
     } catch (error) {
-      message.error('删除失败')
+      message.error('\u540c\u6b65\u5931\u8d25')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -43,51 +44,85 @@ const WarehouseList = () => {
       width: 80,
     },
     {
-      title: '仓库名称',
+      title: '\u540d\u79f0',
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '位置',
-      dataIndex: 'location',
-      key: 'location',
+      title: '\u5e97\u94fa',
+      dataIndex: 'storeName',
+      key: 'storeName',
     },
     {
-      title: '操作',
-      key: 'action',
-      width: 150,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/warehouses/edit/${record.warehouseId}`)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除吗？"
-            onConfirm={() => handleDelete(record.warehouseId)}
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      title: '\u5de5\u4f5c\u65f6\u95f4',
+      dataIndex: 'workingDays',
+      key: 'workingDays',
+      width: 140,
+    },
+    {
+      title: '\u72b6\u6001',
+      dataIndex: 'status',
+      key: 'status',
+      width: 120,
+    },
+    {
+      title: '\u6700\u5c0f\u5de5\u4f5c\u65e5',
+      dataIndex: 'minWorkingDays',
+      key: 'minWorkingDays',
+      width: 120,
+    },
+    {
+      title: '\u6d3e\u9001\u9650\u5236',
+      dataIndex: 'postingsLimit',
+      key: 'postingsLimit',
+      width: 120,
+    },
+    {
+      title: '\u6700\u5c0f\u6d3e\u9001\u9650\u5236',
+      dataIndex: 'minPostingsLimit',
+      key: 'minPostingsLimit',
+      width: 140,
+    },
+    {
+      title: '\u662f\u5426rfbs',
+      dataIndex: 'isRfbs',
+      key: 'isRfbs',
+      width: 100,
+      render: (value) => (value ? '\u662f' : '\u5426'),
+    },
+    {
+      title: '\u521b\u5efa\u65f6\u95f4',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+    },
+    {
+      title: '\u914d\u9001\u65b9\u5f0f',
+      dataIndex: 'deliveryMethods',
+      key: 'deliveryMethods',
+      render: (methods) => {
+        if (!methods || methods.length === 0) {
+          return '-'
+        }
+        return (
+          <div>
+            {methods.map((item) => (
+              <div key={item.id}>
+                {item.name || '-'} {item.status ? `(${item.status})` : ''}
+              </div>
+            ))}
+          </div>
+        )
+      },
     },
   ]
 
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h1>仓库管理</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/warehouses/new')}
-        >
-          新增仓库
+        <h1>{'\u4ed3\u5e93\u7ba1\u7406'}</h1>
+        <Button type="primary" onClick={handleSync} loading={syncing}>
+          {'\u540c\u6b65\u4ed3\u5e93'}
         </Button>
       </div>
       <Table

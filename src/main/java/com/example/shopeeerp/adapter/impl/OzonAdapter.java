@@ -54,6 +54,8 @@ public class OzonAdapter implements PlatformAdapter {
     private static final String PRODUCT_INFO_URL = OZON_API_BASE_URL + "/v3/product/info/list";
     private static final String CASHFLOW_URL = OZON_API_BASE_URL + "/v1/finance/cash-flow-statement/list";
     private static final String TRANSACTION_URL = OZON_API_BASE_URL + "/v3/finance/transaction/list";
+    private static final String WAREHOUSE_LIST_URL = OZON_API_BASE_URL + "/v1/warehouse/list";
+    private static final String DELIVERY_METHOD_LIST_URL = OZON_API_BASE_URL + "/v1/delivery-method/list";
 
     private static final Logger log = LoggerFactory.getLogger(OzonAdapter.class);
 
@@ -523,6 +525,93 @@ public class OzonAdapter implements PlatformAdapter {
         } while (page <= totalPages);
 
         return operations;
+    }
+
+    public List<OzonWarehouseListResponse.Warehouse> fetchWarehouses(int limit) {
+        List<OzonWarehouseListResponse.Warehouse> warehouses = new ArrayList<>();
+        int offset = 0;
+        int pageSize = limit > 0 ? limit : 100;
+
+        while (true) {
+            OzonWarehouseListRequest request = new OzonWarehouseListRequest();
+            request.setLimit(pageSize);
+            request.setOffset(offset);
+
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<OzonWarehouseListRequest> entity = new HttpEntity<>(request, headers);
+
+            try {
+                ResponseEntity<OzonWarehouseListResponse> response = restTemplate.exchange(
+                        WAREHOUSE_LIST_URL,
+                        HttpMethod.POST,
+                        entity,
+                        OzonWarehouseListResponse.class
+                );
+
+                if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                    return null;
+                }
+
+                List<OzonWarehouseListResponse.Warehouse> result = response.getBody().getResult();
+                if (result == null || result.isEmpty()) {
+                    break;
+                }
+                warehouses.addAll(result);
+                offset += pageSize;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        return warehouses;
+    }
+
+    public List<OzonDeliveryMethodListResponse.DeliveryMethod> fetchDeliveryMethods(Long warehouseId, int limit) {
+        if (warehouseId == null) {
+            return null;
+        }
+        List<OzonDeliveryMethodListResponse.DeliveryMethod> methods = new ArrayList<>();
+        int offset = 0;
+        int pageSize = limit > 0 ? limit : 100;
+        boolean hasNext = true;
+
+        while (hasNext) {
+            OzonDeliveryMethodListRequest request = new OzonDeliveryMethodListRequest();
+            OzonDeliveryMethodListRequest.Filter filter = new OzonDeliveryMethodListRequest.Filter();
+            filter.setWarehouse_id(warehouseId);
+            request.setFilter(filter);
+            request.setLimit(pageSize);
+            request.setOffset(offset);
+
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<OzonDeliveryMethodListRequest> entity = new HttpEntity<>(request, headers);
+
+            try {
+                ResponseEntity<OzonDeliveryMethodListResponse> response = restTemplate.exchange(
+                        DELIVERY_METHOD_LIST_URL,
+                        HttpMethod.POST,
+                        entity,
+                        OzonDeliveryMethodListResponse.class
+                );
+
+                if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                    return null;
+                }
+
+                OzonDeliveryMethodListResponse body = response.getBody();
+                if (body.getResult() != null && !body.getResult().isEmpty()) {
+                    methods.addAll(body.getResult());
+                }
+                hasNext = Boolean.TRUE.equals(body.getHas_next());
+                offset += pageSize;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        return methods;
     }
 
     @Override

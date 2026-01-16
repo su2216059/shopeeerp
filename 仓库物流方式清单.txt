@@ -1,0 +1,78 @@
+https://api-seller.ozon.ru/v1/delivery-method/list
+请求范例
+{
+  "filter": {
+    "provider_id": 424,
+    "status": "ACTIVE",
+    "warehouse_id": 15588127982000
+  },
+  "limit": 100,
+  "offset": 0
+}
+回复范例
+{
+  "result": [
+    {
+      "id": 15588127982000,
+      "company_id": 1,
+      "name": "Ozon物流快递员，Yesipovo",
+      "status": "ACTIVE",
+      "cutoff": "13:00",
+      "provider_id": 24,
+      "template_id": 0,
+      "warehouse_id": 15588127982000,
+      "created_at": "2019-04-04T15:22:31.048202Z",
+      "updated_at": "2021-08-15T10:21:44.854209Z",
+      "sla_cut_in": 1440
+    }
+  ],
+  "has_next": false
+}
+
+company_id	
+integer <int64>
+卖家识别号。
+
+created_at	
+string <date-time>
+创建快递方式的日期和时间。
+
+cutoff	
+string
+卖方必须在此之前备货的时间。
+
+id	
+integer <int64>
+快递方式识别号。
+
+name	
+string
+快递方式名称。
+
+provider_id	
+integer <int64>
+快递服务识别号。
+
+sla_cut_in	
+integer <int64>
+根据仓库设置，订单备货的最短时间（以分钟为单位）。
+
+status	
+string
+快递方式状态:
+
+NEW — 已创建,
+EDITED — 正在编辑,
+ACTIVE — 已激活,
+DISABLED — 未激活。
+template_id	
+integer <int64>
+订单快递服务识别号。
+
+updated_at	
+string <date-time>
+快递方式最后更新的日期和时间。
+
+warehouse_id	
+integer <int64>
+仓库识别号。

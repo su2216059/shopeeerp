@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Table, message, Button, Space, DatePicker, Tag, Image, Select, InputNumber } from 'antd'
+import { Table, message, Button, Space, DatePicker, Tag, Image, Select, InputNumber, Modal } from 'antd'
 import { ozonOrderApi, ozonProfitApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
 
@@ -57,6 +57,8 @@ const OzonOrderList = () => {
   const [syncingProfit, setSyncingProfit] = useState(false)
   const [searchRange, setSearchRange] = useState([])
   const [searchStatus, setSearchStatus] = useState('')
+  const [syncRange, setSyncRange] = useState([])
+  const [syncModalOpen, setSyncModalOpen] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
   const [selectedRows, setSelectedRows] = useState([])
   const [exchangeRate, setExchangeRate] = useState(null)
@@ -184,11 +186,11 @@ const OzonOrderList = () => {
     }
   }
 
-  const handleSync = async () => {
+  const handleSync = async (range = []) => {
     setSyncing(true)
     try {
-      const start = searchRange?.[0] ? searchRange[0].toISOString() : undefined
-      const end = searchRange?.[1] ? searchRange[1].toISOString() : undefined
+      const start = range?.[0] ? range[0].toISOString() : undefined
+      const end = range?.[1] ? range[1].toISOString() : undefined
       const res = await ozonOrderApi.sync({ start, end })
       const msg = res?.message || '同步任务已启动，请稍后刷新列表'
       message.success(msg)
@@ -207,6 +209,11 @@ const OzonOrderList = () => {
     } finally {
       setSyncing(false)
     }
+  }
+
+  const handleSyncConfirm = async () => {
+    await handleSync(syncRange)
+    setSyncModalOpen(false)
   }
 
   const handleSyncProfit = async () => {
@@ -471,7 +478,7 @@ const OzonOrderList = () => {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>Ozon 订单列表</h1>
         <Space>
-          <Button type="primary" loading={syncing} onClick={handleSync}>
+          <Button type="primary" loading={syncing} onClick={() => setSyncModalOpen(true)}>
             同步订单
           </Button>
           <Button loading={syncingProfit} onClick={handleSyncProfit}>
@@ -479,6 +486,21 @@ const OzonOrderList = () => {
           </Button>
         </Space>
       </div>
+      <Modal
+        title="选择同步时间"
+        open={syncModalOpen}
+        onOk={handleSyncConfirm}
+        onCancel={() => setSyncModalOpen(false)}
+        okButtonProps={{ loading: syncing }}
+      >
+        <DatePicker.RangePicker
+          showTime
+          value={syncRange}
+          onChange={(value) => setSyncRange(value || [])}
+          placeholder={['同步开始时间', '同步结束时间']}
+          style={{ width: '100%' }}
+        />
+      </Modal>
       <div style={{ marginBottom: 16 }}>
         <Space wrap>
           <DatePicker.RangePicker

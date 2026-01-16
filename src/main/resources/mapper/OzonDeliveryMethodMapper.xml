@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonDeliveryMethodMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonDeliveryMethod">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="warehouse_id" property="warehouseId" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="cutoff" property="cutoff" jdbcType="VARCHAR"/>
+        <result column="provider_id" property="providerId" jdbcType="BIGINT"/>
+        <result column="company_id" property="companyId" jdbcType="BIGINT"/>
+        <result column="template_id" property="templateId" jdbcType="BIGINT"/>
+        <result column="sla_cut_in" property="slaCutIn" jdbcType="BIGINT"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, warehouse_id, name, status, cutoff, provider_id, company_id, template_id,
+        sla_cut_in, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_delivery_method WHERE id = #{id}
+    </select>
+
+    <select id="selectByWarehouseId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_delivery_method WHERE warehouse_id = #{warehouseId}
+    </select>
+
+    <select id="selectByWarehouseIds" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_delivery_method
+        <where>
+            <if test="warehouseIds != null and warehouseIds.size() > 0">
+                warehouse_id IN
+                <foreach collection="warehouseIds" item="wid" open="(" separator="," close=")">
+                    #{wid}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonDeliveryMethod">
+        INSERT INTO ozon_delivery_method (
+            id, warehouse_id, name, status, cutoff, provider_id, company_id,
+            template_id, sla_cut_in, created_at, updated_at
+        ) VALUES (
+            #{id}, #{warehouseId}, #{name}, #{status}, #{cutoff}, #{providerId}, #{companyId},
+            #{templateId}, #{slaCutIn}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO ozon_delivery_method (
+            id, warehouse_id, name, status, cutoff, provider_id, company_id,
+            template_id, sla_cut_in, created_at, updated_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.id}, #{item.warehouseId}, #{item.name}, #{item.status}, #{item.cutoff},
+                #{item.providerId}, #{item.companyId}, #{item.templateId}, #{item.slaCutIn},
+                #{item.createdAt}, #{item.updatedAt}
+            )
+        </foreach>
+    </insert>
+
+    <update id="updateById" parameterType="com.example.shopeeerp.pojo.OzonDeliveryMethod">
+        UPDATE ozon_delivery_method SET
+            warehouse_id = #{warehouseId},
+            name = #{name},
+            status = #{status},
+            cutoff = #{cutoff},
+            provider_id = #{providerId},
+            company_id = #{companyId},
+            template_id = #{templateId},
+            sla_cut_in = #{slaCutIn},
+            created_at = #{createdAt},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByWarehouseId">
+        DELETE FROM ozon_delivery_method WHERE warehouse_id = #{warehouseId}
+    </delete>
+
+    <delete id="deleteByWarehouseIds">
+        DELETE FROM ozon_delivery_method
+        <where>
+            <if test="warehouseIds != null and warehouseIds.size() > 0">
+                warehouse_id IN
+                <foreach collection="warehouseIds" item="wid" open="(" separator="," close=")">
+                    #{wid}
+                </foreach>
+            </if>
+        </where>
+    </delete>
+</mapper>

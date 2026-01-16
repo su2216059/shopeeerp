@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.OzonWarehouseMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonWarehouse">
+        <id column="warehouse_id" property="warehouseId" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="store_name" property="storeName" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="working_days" property="workingDays" jdbcType="VARCHAR"/>
+        <result column="min_working_days" property="minWorkingDays" jdbcType="INTEGER"/>
+        <result column="postings_limit" property="postingsLimit" jdbcType="INTEGER"/>
+        <result column="min_postings_limit" property="minPostingsLimit" jdbcType="INTEGER"/>
+        <result column="is_rfbs" property="isRfbs" jdbcType="TINYINT"/>
+        <result column="has_entrusted_acceptance" property="hasEntrustedAcceptance" jdbcType="TINYINT"/>
+        <result column="can_print_act_in_advance" property="canPrintActInAdvance" jdbcType="TINYINT"/>
+        <result column="has_postings_limit" property="hasPostingsLimit" jdbcType="TINYINT"/>
+        <result column="is_karantin" property="isKarantin" jdbcType="TINYINT"/>
+        <result column="is_kgt" property="isKgt" jdbcType="TINYINT"/>
+        <result column="is_timetable_editable" property="isTimetableEditable" jdbcType="TINYINT"/>
+        <result column="first_mile_type_json" property="firstMileTypeJson" jdbcType="LONGVARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        warehouse_id, name, store_name, status, working_days, min_working_days,
+        postings_limit, min_postings_limit, is_rfbs, has_entrusted_acceptance,
+        can_print_act_in_advance, has_postings_limit, is_karantin, is_kgt,
+        is_timetable_editable, first_mile_type_json, created_at, updated_at
+    </sql>
+
+    <select id="selectByWarehouseId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_warehouse WHERE warehouse_id = #{warehouseId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM ozon_warehouse ORDER BY warehouse_id
+    </select>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonWarehouse">
+        INSERT INTO ozon_warehouse (
+            warehouse_id, name, store_name, status, working_days, min_working_days,
+            postings_limit, min_postings_limit, is_rfbs, has_entrusted_acceptance,
+            can_print_act_in_advance, has_postings_limit, is_karantin, is_kgt,
+            is_timetable_editable, first_mile_type_json, created_at, updated_at
+        ) VALUES (
+            #{warehouseId}, #{name}, #{storeName}, #{status}, #{workingDays}, #{minWorkingDays},
+            #{postingsLimit}, #{minPostingsLimit}, #{isRfbs}, #{hasEntrustedAcceptance},
+            #{canPrintActInAdvance}, #{hasPostingsLimit}, #{isKarantin}, #{isKgt},
+            #{isTimetableEditable}, #{firstMileTypeJson}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateByWarehouseId" parameterType="com.example.shopeeerp.pojo.OzonWarehouse">
+        UPDATE ozon_warehouse SET
+            name = #{name},
+            store_name = #{storeName},
+            status = #{status},
+            working_days = #{workingDays},
+            min_working_days = #{minWorkingDays},
+            postings_limit = #{postingsLimit},
+            min_postings_limit = #{minPostingsLimit},
+            is_rfbs = #{isRfbs},
+            has_entrusted_acceptance = #{hasEntrustedAcceptance},
+            can_print_act_in_advance = #{canPrintActInAdvance},
+            has_postings_limit = #{hasPostingsLimit},
+            is_karantin = #{isKarantin},
+            is_kgt = #{isKgt},
+            is_timetable_editable = #{isTimetableEditable},
+            first_mile_type_json = #{firstMileTypeJson},
+            updated_at = #{updatedAt}
+        WHERE warehouse_id = #{warehouseId}
+    </update>
+
+    <delete id="deleteByWarehouseId">
+        DELETE FROM ozon_warehouse WHERE warehouse_id = #{warehouseId}
+    </delete>
+</mapper>
