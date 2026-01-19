@@ -1,0 +1,5 @@
+# One URL per line. Use category, ranking, or search result pages.
+# Example:
+https://www.ozon.ru/category/smartfony-15502/apple-26303000/?brand_was_predicted=true&category_was_predicted=true&deny_category_prediction=true&from_global=true&text=iphone
+https://www.ozon.ru/category/smartfony-15502/
+https://www.ozon.ru/category/smartfony-15502/apple-26303000/?brand_was_predicted=true&category_was_predicted=true&deny_category_prediction=true&from_global=true&text=iphone

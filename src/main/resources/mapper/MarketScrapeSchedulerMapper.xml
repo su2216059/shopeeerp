@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.MarketScrapeSchedulerMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.MarketScrapeScheduler">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="worker_id" property="workerId" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="current_concurrency" property="currentConcurrency" jdbcType="INTEGER"/>
+        <result column="max_concurrency" property="maxConcurrency" jdbcType="INTEGER"/>
+        <result column="last_heartbeat" property="lastHeartbeat" jdbcType="TIMESTAMP"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, worker_id, status, current_concurrency, max_concurrency, last_heartbeat, created_at, updated_at
+    </sql>
+
+    <select id="selectByWorkerId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_scrape_scheduler
+        WHERE worker_id = #{workerId}
+    </select>
+
+    <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketScrapeScheduler">
+        INSERT INTO market_scrape_scheduler (
+            worker_id, status, current_concurrency, max_concurrency, last_heartbeat, created_at, updated_at
+        ) VALUES (
+            #{workerId}, #{status}, #{currentConcurrency}, #{maxConcurrency}, #{lastHeartbeat}, #{createdAt}, #{updatedAt}
+        )
+        ON DUPLICATE KEY UPDATE
+            status = VALUES(status),
+            current_concurrency = VALUES(current_concurrency),
+            max_concurrency = VALUES(max_concurrency),
+            last_heartbeat = VALUES(last_heartbeat),
+            updated_at = VALUES(updated_at)
+    </insert>
+</mapper>

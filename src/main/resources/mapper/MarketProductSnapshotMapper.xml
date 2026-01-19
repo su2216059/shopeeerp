@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.MarketProductSnapshotMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.MarketProductSnapshot">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="platform" property="platform" jdbcType="VARCHAR"/>
+        <result column="platform_product_id" property="platformProductId" jdbcType="VARCHAR"/>
+        <result column="snapshot_date" property="snapshotDate" jdbcType="DATE"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="rating" property="rating" jdbcType="DECIMAL"/>
+        <result column="review_count" property="reviewCount" jdbcType="INTEGER"/>
+        <result column="availability_status" property="availabilityStatus" jdbcType="VARCHAR"/>
+        <result column="stock_hint" property="stockHint" jdbcType="VARCHAR"/>
+        <result column="category_rank" property="categoryRank" jdbcType="INTEGER"/>
+        <result column="search_rank" property="searchRank" jdbcType="INTEGER"/>
+        <result column="data_source" property="dataSource" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, platform, platform_product_id, snapshot_date, price, rating, review_count,
+        availability_status, stock_hint, category_rank, search_rank, data_source, created_at
+    </sql>
+
+    <select id="selectByUnique" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_product_snapshot
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND snapshot_date = #{snapshotDate}
+    </select>
+
+    <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketProductSnapshot">
+        INSERT INTO market_product_snapshot (
+            platform, platform_product_id, snapshot_date, price, rating, review_count,
+            availability_status, stock_hint, category_rank, search_rank, data_source, created_at
+        ) VALUES (
+            #{platform}, #{platformProductId}, #{snapshotDate}, #{price}, #{rating}, #{reviewCount},
+            #{availabilityStatus}, #{stockHint}, #{categoryRank}, #{searchRank}, #{dataSource}, #{createdAt}
+        )
+        ON DUPLICATE KEY UPDATE
+            price = VALUES(price),
+            rating = VALUES(rating),
+            review_count = VALUES(review_count),
+            availability_status = VALUES(availability_status),
+            stock_hint = VALUES(stock_hint),
+            category_rank = VALUES(category_rank),
+            search_rank = VALUES(search_rank),
+            data_source = VALUES(data_source)
+    </insert>
+</mapper>

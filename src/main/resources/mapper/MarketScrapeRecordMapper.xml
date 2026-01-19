@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.MarketScrapeRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.MarketScrapeRecord">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="platform" property="platform" jdbcType="VARCHAR"/>
+        <result column="market" property="market" jdbcType="VARCHAR"/>
+        <result column="url" property="url" jdbcType="VARCHAR"/>
+        <result column="data_type" property="dataType" jdbcType="VARCHAR"/>
+        <result column="fetched_at" property="fetchedAt" jdbcType="TIMESTAMP"/>
+        <result column="raw_payload" property="rawPayload" jdbcType="LONGVARCHAR"/>
+        <result column="parsed_payload" property="parsedPayload" jdbcType="LONGVARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="error_message" property="errorMessage" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.MarketScrapeRecord">
+        INSERT INTO market_scrape_record (
+            platform, market, url, data_type, fetched_at, raw_payload, parsed_payload,
+            status, error_message, created_at
+        ) VALUES (
+            #{platform}, #{market}, #{url}, #{dataType}, #{fetchedAt}, #{rawPayload}, #{parsedPayload},
+            #{status}, #{errorMessage}, #{createdAt}
+        )
+    </insert>
+</mapper>

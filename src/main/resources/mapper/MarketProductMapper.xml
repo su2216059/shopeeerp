@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.MarketProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.MarketProduct">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="platform" property="platform" jdbcType="VARCHAR"/>
+        <result column="market" property="market" jdbcType="VARCHAR"/>
+        <result column="platform_product_id" property="platformProductId" jdbcType="VARCHAR"/>
+        <result column="platform_sku_id" property="platformSkuId" jdbcType="VARCHAR"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="brand" property="brand" jdbcType="VARCHAR"/>
+        <result column="category_id" property="categoryId" jdbcType="VARCHAR"/>
+        <result column="category_path" property="categoryPath" jdbcType="VARCHAR"/>
+        <result column="first_seen_at" property="firstSeenAt" jdbcType="TIMESTAMP"/>
+        <result column="last_seen_at" property="lastSeenAt" jdbcType="TIMESTAMP"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, platform, market, platform_product_id, platform_sku_id, title, brand, category_id,
+        category_path, first_seen_at, last_seen_at, created_at, updated_at
+    </sql>
+
+    <select id="selectByPlatformAndProductId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_product
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+    </select>
+
+    <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketProduct">
+        INSERT INTO market_product (
+            platform, market, platform_product_id, platform_sku_id, title, brand,
+            category_id, category_path, first_seen_at, last_seen_at, created_at, updated_at
+        ) VALUES (
+            #{platform}, #{market}, #{platformProductId}, #{platformSkuId}, #{title}, #{brand},
+            #{categoryId}, #{categoryPath}, #{firstSeenAt}, #{lastSeenAt}, #{createdAt}, #{updatedAt}
+        )
+        ON DUPLICATE KEY UPDATE
+            market = VALUES(market),
+            platform_sku_id = VALUES(platform_sku_id),
+            title = VALUES(title),
+            brand = VALUES(brand),
+            category_id = VALUES(category_id),
+            category_path = VALUES(category_path),
+            first_seen_at = IFNULL(first_seen_at, VALUES(first_seen_at)),
+            last_seen_at = VALUES(last_seen_at),
+            updated_at = VALUES(updated_at)
+    </insert>
+</mapper>
