@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.MarketTrendSignalMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.MarketTrendSignal">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="platform" property="platform" jdbcType="VARCHAR"/>
+        <result column="platform_product_id" property="platformProductId" jdbcType="VARCHAR"/>
+        <result column="signal_date" property="signalDate" jdbcType="DATE"/>
+        <result column="trend_7d" property="trend7d" jdbcType="DECIMAL"/>
+        <result column="trend_30d" property="trend30d" jdbcType="DECIMAL"/>
+        <result column="rank_change_7d" property="rankChange7d" jdbcType="INTEGER"/>
+        <result column="review_velocity" property="reviewVelocity" jdbcType="DECIMAL"/>
+        <result column="stock_risk_level" property="stockRiskLevel" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, platform, platform_product_id, signal_date,
+        trend_7d, trend_30d, rank_change_7d, review_velocity,
+        stock_risk_level, created_at
+    </sql>
+
+    <select id="selectByUnique" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND signal_date = #{signalDate}
+    </select>
+
+    <select id="selectLatestByProduct" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+        ORDER BY signal_date DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectByDate" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND signal_date = #{signalDate}
+        ORDER BY trend_7d DESC
+    </select>
+
+    <select id="selectHistoryByProduct" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+        ORDER BY signal_date DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketTrendSignal">
+        INSERT INTO market_trend_signal (
+            platform, platform_product_id, signal_date,
+            trend_7d, trend_30d, rank_change_7d, review_velocity,
+            stock_risk_level, created_at
+        ) VALUES (
+            #{platform}, #{platformProductId}, #{signalDate},
+            #{trend7d}, #{trend30d}, #{rankChange7d}, #{reviewVelocity},
+            #{stockRiskLevel}, #{createdAt}
+        )
+        ON DUPLICATE KEY UPDATE
+            trend_7d = VALUES(trend_7d),
+            trend_30d = VALUES(trend_30d),
+            rank_change_7d = VALUES(rank_change_7d),
+            review_velocity = VALUES(review_velocity),
+            stock_risk_level = VALUES(stock_risk_level)
+    </insert>
+</mapper>

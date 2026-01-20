@@ -49,4 +49,46 @@
             search_rank = VALUES(search_rank),
             data_source = VALUES(data_source)
     </insert>
+
+    <select id="selectByProductAndDateRange" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_product_snapshot
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND snapshot_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY snapshot_date ASC
+    </select>
+
+    <select id="selectDistinctProductIds" resultType="string">
+        SELECT DISTINCT platform_product_id
+        FROM market_product_snapshot
+        WHERE platform = #{platform}
+          AND snapshot_date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <select id="selectFirstByProduct" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_product_snapshot
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+        ORDER BY snapshot_date ASC
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestByProduct" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_product_snapshot
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+        ORDER BY snapshot_date DESC
+        LIMIT 1
+    </select>
+
+    <select id="countSnapshotDays" resultType="int">
+        SELECT COUNT(DISTINCT snapshot_date)
+        FROM market_product_snapshot
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND snapshot_date BETWEEN #{startDate} AND #{endDate}
+    </select>
 </mapper>

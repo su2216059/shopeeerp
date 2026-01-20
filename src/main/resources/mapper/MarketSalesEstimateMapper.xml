@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.MarketSalesEstimateMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.MarketSalesEstimate">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="platform" property="platform" jdbcType="VARCHAR"/>
+        <result column="platform_product_id" property="platformProductId" jdbcType="VARCHAR"/>
+        <result column="period_type" property="periodType" jdbcType="VARCHAR"/>
+        <result column="period_start" property="periodStart" jdbcType="DATE"/>
+        <result column="period_end" property="periodEnd" jdbcType="DATE"/>
+        <result column="estimated_sales_min" property="estimatedSalesMin" jdbcType="INTEGER"/>
+        <result column="estimated_sales_max" property="estimatedSalesMax" jdbcType="INTEGER"/>
+        <result column="estimated_sales_mid" property="estimatedSalesMid" jdbcType="INTEGER"/>
+        <result column="estimation_model" property="estimationModel" jdbcType="VARCHAR"/>
+        <result column="confidence_score" property="confidenceScore" jdbcType="INTEGER"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, platform, platform_product_id, period_type, period_start, period_end,
+        estimated_sales_min, estimated_sales_max, estimated_sales_mid,
+        estimation_model, confidence_score, created_at
+    </sql>
+
+    <select id="selectByUnique" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_sales_estimate
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND period_type = #{periodType}
+          AND period_start = #{periodStart}
+          AND period_end = #{periodEnd}
+    </select>
+
+    <select id="selectLatestByProduct" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_sales_estimate
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND period_type = #{periodType}
+        ORDER BY period_end DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectByPeriod" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_sales_estimate
+        WHERE platform = #{platform}
+          AND period_type = #{periodType}
+          AND period_start = #{periodStart}
+          AND period_end = #{periodEnd}
+        ORDER BY estimated_sales_mid DESC
+    </select>
+
+    <select id="selectHistoryByProduct" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_sales_estimate
+        WHERE platform = #{platform}
+          AND platform_product_id = #{platformProductId}
+          AND period_type = #{periodType}
+        ORDER BY period_end DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketSalesEstimate">
+        INSERT INTO market_sales_estimate (
+            platform, platform_product_id, period_type, period_start, period_end,
+            estimated_sales_min, estimated_sales_max, estimated_sales_mid,
+            estimation_model, confidence_score, created_at
+        ) VALUES (
+            #{platform}, #{platformProductId}, #{periodType}, #{periodStart}, #{periodEnd},
+            #{estimatedSalesMin}, #{estimatedSalesMax}, #{estimatedSalesMid},
+            #{estimationModel}, #{confidenceScore}, #{createdAt}
+        )
+        ON DUPLICATE KEY UPDATE
+            estimated_sales_min = VALUES(estimated_sales_min),
+            estimated_sales_max = VALUES(estimated_sales_max),
+            estimated_sales_mid = VALUES(estimated_sales_mid),
+            estimation_model = VALUES(estimation_model),
+            confidence_score = VALUES(confidence_score)
+    </insert>
+</mapper>
