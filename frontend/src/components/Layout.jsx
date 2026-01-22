@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Layout as AntLayout, Menu, theme } from 'antd'
+import { Layout as AntLayout, Menu, theme, Dropdown, Avatar, Space, Typography, message } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -15,17 +15,62 @@ import {
   BarChartOutlined,
   TeamOutlined,
   SafetyOutlined,
+  LineChartOutlined,
+  FundOutlined,
+  LogoutOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
+import { useAuth } from '../context/AuthContext'
 
 const { Header, Sider, Content } = AntLayout
+const { Text } = Typography
 
 const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  const { user, logout } = useAuth()
   const {
     token: { colorBgContainer },
   } = theme.useToken()
+
+  const handleLogout = async () => {
+    await logout()
+    message.success('已退出登录')
+    navigate('/login')
+  }
+
+  const userMenuItems = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人信息',
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: '设置',
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      danger: true,
+    },
+  ]
+
+  const handleUserMenuClick = ({ key }) => {
+    if (key === 'logout') {
+      handleLogout()
+    } else if (key === 'profile') {
+      // TODO: 跳转到个人信息页
+    } else if (key === 'settings') {
+      // TODO: 跳转到设置页
+    }
+  }
 
   const menuItems = [
     {
@@ -71,6 +116,24 @@ const Layout = ({ children }) => {
       ],
     },
     {
+      key: 'market',
+      icon: <FundOutlined />,
+      label: '市场信号',
+      children: [
+        { key: '/market/products', label: '商品监控' },
+        { key: '/market/trending', label: '热门榜单' },
+        { key: '/market/compare', label: '商品比较' },
+      ],
+    },
+    {
+      key: 'shop',
+      icon: <ShopOutlined />,
+      label: '店铺管理',
+      children: [
+        { key: '/shops', label: '店铺列表' },
+      ],
+    },
+    {
       key: 'system',
       icon: <SafetyOutlined />,
       label: '系统管理',
@@ -96,6 +159,10 @@ const Layout = ({ children }) => {
     if (path.startsWith('/payments')) return ['/payments']
     if (path.startsWith('/invoices')) return ['/invoices']
     if (path.startsWith('/sales-data')) return ['/sales-data']
+    if (path.startsWith('/market/products')) return ['/market/products']
+    if (path.startsWith('/market/trending')) return ['/market/trending']
+    if (path.startsWith('/market/compare')) return ['/market/compare']
+    if (path.startsWith('/shops')) return ['/shops']
     if (path.startsWith('/users')) return ['/users']
     if (path.startsWith('/roles')) return ['/roles']
     return [path]
@@ -128,19 +195,32 @@ const Layout = ({ children }) => {
       <AntLayout>
         <Header
           style={{
-            padding: 0,
+            padding: '0 24px 0 16px',
             background: colorBgContainer,
             display: 'flex',
             alignItems: 'center',
-            paddingLeft: 16,
+            justifyContent: 'space-between',
           }}
         >
           <span
             style={{ fontSize: 18, cursor: 'pointer' }}
             onClick={() => setCollapsed(!collapsed)}
           >
-            {collapsed ? '☰' : '☰'}
+            ☰
           </span>
+          
+          <Dropdown
+            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+            placement="bottomRight"
+          >
+            <Space style={{ cursor: 'pointer' }}>
+              <Avatar 
+                style={{ backgroundColor: '#1890ff' }} 
+                icon={<UserOutlined />} 
+              />
+              <Text>{user?.username || '用户'}</Text>
+            </Space>
+          </Dropdown>
         </Header>
         <Content
           style={{

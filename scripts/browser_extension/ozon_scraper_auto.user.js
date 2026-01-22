@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Ozon Auto Scraper (自动批量抓取)
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.7
 // @description  自动批量抓取 Ozon 商品数据，定时执行，只保存有销量的商品
 // @author       ShopeeERP
 // @match        https://www.ozon.ru/*
 // @match        https://ozon.ru/*
+// @match        https://seller.ozon.ru/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_notification
 // @grant        GM_setValue
@@ -13,10 +14,15 @@
 // @grant        GM_addStyle
 // @connect      localhost
 // @connect      127.0.0.1
+// @connect      seller.ozon.ru
 // ==/UserScript==
 
 (function() {
     'use strict';
+
+    // 立即声明全局函数，避免 "not defined" 错误
+    const globalWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+    globalWindow.fetchOzonSalesData = null;
 
     // ========== 配置 ==========
     const CONFIG = {
@@ -99,6 +105,9 @@
     }
 
     function sendToBackend(endpoint, data) {
+        if (endpoint === '/market/snapshots/ingest') {
+            console.log('[OzonAutoScraper] Scraped product payload', data);
+        }
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'POST',
@@ -119,6 +128,197 @@
                 onerror: (error) => reject(error),
             });
         });
+    }
+
+    function resolveOzonCompanyId() {
+        const fromMemory = globalWindow.__ozonCompanyId;
+        if (fromMemory) return String(fromMemory).trim();
+        const stored = GM_getValue('ozonCompanyId', null);
+        if (stored) return String(stored).trim();
+        const keys = [
+            'ozonCompanyId',
+            'ozon_company_id',
+            'companyId',
+            'company_id',
+            'x-o3-company-id',
+        ];
+        for (const key of keys) {
+            const value = localStorage.getItem(key);
+            if (value && String(value).trim()) {
+                const trimmed = String(value).trim();
+                if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    try {
+                        const parsed = JSON.parse(trimmed);
+                        if (parsed?.companyId) return String(parsed.companyId).trim();
+                    } catch (e) {}
+                }
+                return trimmed;
+            }
+        }
+        return null;
+    }
+
+    globalWindow.setOzonCompanyId = function(companyId) {
+        const normalized = String(companyId || '').trim();
+        if (!normalized) return null;
+        globalWindow.__ozonCompanyId = normalized;
+        GM_setValue('ozonCompanyId', normalized);
+        return normalized;
+    };
+
+    function gmPostJson(url, body, headers = {}) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url,
+                headers: { 'Content-Type': 'application/json', ...headers },
+                data: JSON.stringify(body),
+                withCredentials: true,
+                onload: (response) => {
+                    const text = response.responseText || '';
+                    try {
+                        resolve(JSON.parse(text));
+                    } catch (e) {
+                        resolve({ raw: text, status: response.status });
+                    }
+                },
+                onerror: (error) => reject(error),
+            });
+        });
+    }
+
+    function parseIntSafe(value) {
+        if (value === null || value === undefined) return null;
+        const text = String(value).trim();
+        if (!text) return null;
+        const cleaned = text.replace(/[^\d.-]/g, '');
+        if (!cleaned) return null;
+        const num = Number(cleaned);
+        if (!Number.isFinite(num)) return null;
+        return Math.trunc(num);
+    }
+
+    function safeJsonStringify(value) {
+        if (value === undefined || value === null) return null;
+        try {
+            return JSON.stringify(value);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function normalizeDate(value) {
+        if (value === null || value === undefined) return null;
+        const text = String(value).trim();
+        if (!text) return null;
+        return text.length >= 10 ? text.slice(0, 10) : text;
+    }
+
+    function hasSalesData(product) {
+        const soldCount = parseIntSafe(product?.sold_count ?? product?.soldCount);
+        if (soldCount !== null) {
+            return soldCount >= CONFIG.minReviewCount;
+        }
+        const reviewCount = parseIntSafe(product?.review_count ?? product?.reviewCount);
+        if (reviewCount !== null) {
+            return reviewCount >= CONFIG.minReviewCount;
+        }
+        return false;
+    }
+
+    function shouldSkipProduct(product) {
+        if (!CONFIG.onlySaveWithSales) return false;
+        return !hasSalesData(product);
+    }
+
+    function applySalesData(product, item, response) {
+        if (!product || !item) return product;
+
+        if (!product.platform_product_id && item.sku) {
+            product.platform_product_id = String(item.sku);
+        }
+        if (!product.platform_sku_id && item.variantId) {
+            product.platform_sku_id = String(item.variantId);
+        }
+        if (!product.title && item.name) {
+            product.title = item.name;
+        }
+        if (!product.brand && item.brand) {
+            product.brand = item.brand;
+        }
+        if (!product.category_id) {
+            product.category_id = item.category3Id || item.category2Id || item.category1Id || product.category_id;
+        }
+        if (!product.category_path) {
+            const categoryParts = [item.category1, item.category3].filter(Boolean);
+            if (categoryParts.length > 0) {
+                product.category_path = categoryParts.join(' > ');
+            }
+        }
+        if (item.nullableCreateDate) {
+            product.listed_at = normalizeDate(item.nullableCreateDate);
+        }
+        if (response?.updateDate) {
+            product.sales_update_at = response.updateDate;
+            if (String(response.updateDate).length >= 10) {
+                product.snapshot_date = String(response.updateDate).slice(0, 10);
+            }
+        }
+        product.sales_period = 'monthly';
+        if (item.soldCount !== undefined) product.sold_count = String(item.soldCount);
+        if (item.soldSum !== undefined) product.sold_sum = item.soldSum;
+        if (item.gmvSum !== undefined) product.gmv_sum = item.gmvSum;
+        if (item.avgPrice !== undefined) product.avg_price = item.avgPrice;
+        if (item.avgGmv !== undefined) product.avg_gmv = item.avgGmv;
+        if (item.views !== undefined) product.views = String(item.views);
+        if (item.sessionCount !== undefined) product.session_count = String(item.sessionCount);
+        if (item.convToCart !== undefined) product.conv_to_cart = item.convToCart;
+        if (item.convViewToOrder !== undefined) product.conv_view_to_order = item.convViewToOrder;
+        if (item.stock !== undefined) product.stock = String(item.stock);
+        if (item.fboStock !== undefined) product.fbo_stock = item.fboStock;
+        if (item.fbsStock !== undefined) product.fbs_stock = item.fbsStock;
+        if (item.cbStock !== undefined) product.cb_stock = item.cbStock;
+        if (item.retailStock !== undefined) product.retail_stock = item.retailStock;
+        if (item.salesDynamics !== undefined) product.sales_dynamics = item.salesDynamics;
+        if (item.minSellerPrice !== undefined) product.min_seller_price = item.minSellerPrice;
+
+        const itemPayload = safeJsonStringify(item);
+        if (itemPayload) {
+            product.item_payload_json = itemPayload;
+        }
+        const benchmarkPayload = safeJsonStringify(response?.benchmark);
+        if (benchmarkPayload) {
+            product.benchmark_json = benchmarkPayload;
+        }
+
+        return product;
+    }
+
+    async function enrichWithSalesData(product) {
+        if (!product || !product.platform_product_id) return product;
+        const sku = String(product.platform_product_id).trim();
+        if (!sku) return product;
+        if (typeof globalWindow.fetchOzonSalesData !== 'function') {
+            log('fetchOzonSalesData not ready');
+            return product;
+        }
+        try {
+            const data = await globalWindow.fetchOzonSalesData(sku);
+            if (!data || data.error) {
+                log(`sales api error for ${sku}: ${data?.error || 'unknown error'}`);
+                return product;
+            }
+            const items = Array.isArray(data.items) ? data.items : [];
+            if (items.length === 0) {
+                log(`sales api empty items for ${sku}`);
+                return product;
+            }
+            const matched = items.find(item => String(item.sku || '') === sku) || items[0];
+            applySalesData(product, matched, data);
+        } catch (error) {
+            log(`sales api failed for ${sku}: ${error.message}`);
+        }
+        return product;
     }
 
     // ========== 数据提取 ==========
@@ -232,31 +432,200 @@
             }
         }
 
-        // 分类/类目 - 从面包屑导航提取
+        // 分类/类目 - 多种方式提取完整分类路径
         let categoryId = '';
         let categoryPath = '';
-        const breadcrumbSelectors = [
-            '[data-widget="breadcrumbs"] a',
-            'nav[aria-label="breadcrumb"] a',
-            '[class*="breadcrumb"] a',
-            '[class*="Breadcrumb"] a',
-        ];
-        for (const selector of breadcrumbSelectors) {
-            const breadcrumbs = document.querySelectorAll(selector);
-            if (breadcrumbs.length > 0) {
-                const categories = Array.from(breadcrumbs)
-                    .map(a => a.textContent.trim())
-                    .filter(t => t && t !== 'Главная' && t !== 'OZON');
-                if (categories.length > 0) {
-                    categoryPath = categories.join(' > ');
-                    // 尝试从链接提取分类ID
-                    const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
-                    const href = lastBreadcrumb?.getAttribute('href') || '';
-                    const categoryMatch = href.match(/category\/[^/]*-(\d+)/);
-                    if (categoryMatch) {
-                        categoryId = categoryMatch[1];
+        
+        // 方法1: 从 JSON-LD BreadcrumbList 提取（最准确）
+        try {
+            const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+            for (const script of jsonLdScripts) {
+                try {
+                    const data = JSON.parse(script.textContent);
+                    // 处理数组或单个对象
+                    const items = Array.isArray(data) ? data : [data];
+                    for (const item of items) {
+                        if (item['@type'] === 'BreadcrumbList' && item.itemListElement) {
+                            const breadcrumbs = item.itemListElement
+                                .sort((a, b) => (a.position || 0) - (b.position || 0))
+                                .map(el => el.name || el.item?.name)
+                                .filter(name => name && name !== 'OZON' && name !== 'Главная');
+                            if (breadcrumbs.length > 0) {
+                                categoryPath = breadcrumbs.join(' > ');
+                                // 从最后一个项提取分类ID
+                                const lastItem = item.itemListElement[item.itemListElement.length - 1];
+                                const itemUrl = lastItem.item?.['@id'] || lastItem.item || '';
+                                const catMatch = itemUrl.match(/category\/[^/]*-(\d+)/);
+                                if (catMatch) categoryId = catMatch[1];
+                                break;
+                            }
+                        }
+                        // 也检查 Product schema 中的 category
+                        if (item['@type'] === 'Product' && item.category) {
+                            if (!categoryPath) {
+                                categoryPath = item.category;
+                            }
+                        }
                     }
-                    break;
+                } catch (e) {}
+            }
+        } catch (e) {}
+        
+        // 方法2: 从页面内嵌 JSON 数据提取
+        if (!categoryPath) {
+            try {
+                const pageHtml = document.documentElement.innerHTML;
+                // 匹配 breadCrumbs 或 categoryPath 数据
+                const breadcrumbPatterns = [
+                    /"breadCrumbs":\s*\[(.*?)\]/s,
+                    /"categoryPath":\s*"([^"]+)"/,
+                    /"categories":\s*\[(.*?)\]/s,
+                ];
+                for (const pattern of breadcrumbPatterns) {
+                    const match = pageHtml.match(pattern);
+                    if (match) {
+                        if (pattern.source.includes('categoryPath')) {
+                            categoryPath = match[1];
+                        } else {
+                            // 尝试解析数组
+                            try {
+                                const arr = JSON.parse('[' + match[1] + ']');
+                                const names = arr
+                                    .map(item => item.name || item.title || item)
+                                    .filter(n => typeof n === 'string' && n !== 'OZON' && n !== 'Главная');
+                                if (names.length > 0) {
+                                    categoryPath = names.join(' > ');
+                                }
+                            } catch (e) {}
+                        }
+                        if (categoryPath) break;
+                    }
+                }
+            } catch (e) {}
+        }
+        
+        // 方法3: 从面包屑导航 DOM 提取
+        if (!categoryPath) {
+            const breadcrumbSelectors = [
+                '[data-widget="breadCrumbs"] a',
+                '[data-widget="breadcrumbs"] a',
+                '[data-widget="webBreadcrumbs"] a',
+                'nav[aria-label="breadcrumb"] a',
+                'ol[class*="breadcrumb"] li a',
+                'ul[class*="breadcrumb"] li a',
+                '[class*="Breadcrumbs"] a',
+                '[class*="breadcrumbs"] a',
+                // Ozon 特定选择器
+                'div[class*="b0c"] a[href*="/category/"]',
+                'div[class*="breadcrumb"] a',
+            ];
+            for (const selector of breadcrumbSelectors) {
+                const breadcrumbs = document.querySelectorAll(selector);
+                if (breadcrumbs.length > 1) {  // 至少要有2个才算有效面包屑
+                    const categories = Array.from(breadcrumbs)
+                        .map(a => {
+                            // 优先获取纯文本，排除图标等
+                            const text = a.textContent.trim();
+                            return text;
+                        })
+                        .filter(t => t && t.length > 0 && t.length < 100 && t !== 'Главная' && t !== 'OZON' && t !== 'Ozon');
+                    if (categories.length > 0) {
+                        categoryPath = categories.join(' > ');
+                        // 尝试从最后一个链接提取分类ID
+                        const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
+                        const href = lastBreadcrumb?.getAttribute('href') || '';
+                        const categoryMatch = href.match(/category\/[^/]*-(\d+)/);
+                        if (categoryMatch) {
+                            categoryId = categoryMatch[1];
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 方法4: 从商品详情区域找分类链接
+        if (!categoryPath) {
+            const categoryLinkSelectors = [
+                '[data-widget="webCategory"] a',
+                'a[href*="/category/"][class*="link"]',
+                '[class*="product"] a[href*="/category/"]',
+            ];
+            for (const selector of categoryLinkSelectors) {
+                const links = document.querySelectorAll(selector);
+                if (links.length > 0) {
+                    const categories = Array.from(links)
+                        .map(a => a.textContent.trim())
+                        .filter(t => t && t.length > 0 && t.length < 100);
+                    if (categories.length > 0) {
+                        categoryPath = categories.join(' > ');
+                        const lastLink = links[links.length - 1];
+                        const href = lastLink?.getAttribute('href') || '';
+                        const catMatch = href.match(/category\/[^/]*-(\d+)/);
+                        if (catMatch) categoryId = catMatch[1];
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 如果还没找到分类ID，从URL中提取
+        if (!categoryId) {
+            const urlCategoryMatch = window.location.href.match(/category\/[^/]*-(\d+)/);
+            if (urlCategoryMatch) categoryId = urlCategoryMatch[1];
+        }
+
+        // 提取商品上架时间
+        let listedAt = null;
+        const pageHtml = document.documentElement.innerHTML;
+        
+        // 方法1: 从 registrationDate 字段提取（Ozon 主要使用这个字段）
+        const regDateMatch = pageHtml.match(/"registrationDate":\s*"([^"]+)"/);
+        if (regDateMatch) {
+            try {
+                const date = new Date(regDateMatch[1]);
+                if (!isNaN(date.getTime())) {
+                    listedAt = date.toISOString().split('T')[0];
+                }
+            } catch (e) {}
+        }
+        
+        // 方法2: 从其他可能的日期字段提取
+        if (!listedAt) {
+            const datePatterns = [
+                /"createdAt":\s*"([^"]+)"/,
+                /"listingDate":\s*"([^"]+)"/,
+                /"publishDate":\s*"([^"]+)"/,
+            ];
+            for (const pattern of datePatterns) {
+                const match = pageHtml.match(pattern);
+                if (match) {
+                    try {
+                        const date = new Date(match[1]);
+                        if (!isNaN(date.getTime())) {
+                            listedAt = date.toISOString().split('T')[0];
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+        
+        // 方法3: 从页面文本提取 "на Ozon с" (在Ozon上自...)
+        if (!listedAt) {
+            const ruMonths = {
+                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
+                'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
+                'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
+            };
+            const ozonSinceMatch = pageHtml.match(/на\s+Ozon\s+с\s+(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+            if (ozonSinceMatch) {
+                const day = ozonSinceMatch[1].padStart(2, '0');
+                const monthRu = ozonSinceMatch[2].toLowerCase();
+                const year = ozonSinceMatch[3];
+                const month = ruMonths[monthRu];
+                if (month) {
+                    listedAt = `${year}-${month}-${day}`;
                 }
             }
         }
@@ -274,6 +643,7 @@
             review_count: reviewCount,
             estimated_sales: estimatedSales,
             availability_status: availabilityStatus,
+            listed_at: listedAt,  // 商品上架时间
             snapshot_date: new Date().toISOString().split('T')[0],
             data_source: 'detail_page',
         };
@@ -394,9 +764,10 @@
         scrapedCount++;
         log(`抓取商品: ${product.platform_product_id} - ${product.title?.substring(0, 30)}...`);
 
-        // 检查是否有销量数据
-        if (CONFIG.onlySaveWithSales && (!product.review_count || product.review_count < CONFIG.minReviewCount)) {
-            log(`跳过 (无评论数据): ${product.platform_product_id}`);
+        await enrichWithSalesData(product);
+
+        if (shouldSkipProduct(product)) {
+            log(`skip ${product.platform_product_id} (sold_count:${product.sold_count || 0}, review:${product.review_count || 0})`);
             skippedCount++;
             return;
         }
@@ -404,7 +775,11 @@
         try {
             await sendToBackend('/market/snapshots/ingest', [product]);
             savedCount++;
-            log(`保存成功: ${product.platform_product_id}, 评论:${product.review_count}, 估算销量:${product.estimated_sales}`);
+            const catInfo = product.category_path || '-';
+            const listedInfo = product.listed_at || '未知';
+            log(`保存成功: ${product.platform_product_id}`);
+            log(`  分类: ${catInfo}`);
+            log(`  上架: ${listedInfo} | 评论:${product.review_count}`);
         } catch (error) {
             log(`保存失败: ${error.message}`);
         }
@@ -456,16 +831,18 @@
                     
                     scrapedCount++;
                     
-                    // 检查是否有销量数据
-                    if (CONFIG.onlySaveWithSales && (!product.review_count || product.review_count < CONFIG.minReviewCount)) {
-                        log(`跳过 #${absoluteRank}: ${product.platform_product_id} (评论:${product.review_count || 0})`);
+                    await enrichWithSalesData(product);
+
+                    if (shouldSkipProduct(product)) {
+                        log(`skip #${absoluteRank}: ${product.platform_product_id} (sold_count:${product.sold_count || 0}, review:${product.review_count || 0})`);
                         skippedCount++;
                     } else {
                         try {
                             await sendToBackend('/market/snapshots/ingest', [product]);
                             savedCount++;
-                            const rankInfo = product.category_rank ? `分类排名:${product.category_rank}` : `搜索排名:${product.search_rank}`;
-                            log(`✓ #${absoluteRank} ${product.platform_product_id} | ${rankInfo} | 评论:${product.review_count}`);
+                            const rankInfo = product.category_rank ? `排名:${product.category_rank}` : `搜索:${product.search_rank}`;
+                            const catInfo = product.category_path ? product.category_path.substring(0, 30) : '-';
+                            log(`✓ #${absoluteRank} ${product.platform_product_id} | ${rankInfo} | ${catInfo}`);
                         } catch (error) {
                             log(`保存失败: ${error.message}`);
                         }
@@ -565,35 +942,160 @@
             }
         }
 
-        // 分类 - 从面包屑或 JSON 提取
+        // 分类 - 多种方式提取完整分类路径
         let categoryId = '';
         let categoryPath = '';
         
-        // 从 JSON 提取
-        const categoryMatch = html.match(/"categoryPath":\s*"([^"]+)"/) ||
-                             html.match(/"category":\s*"([^"]+)"/);
-        if (categoryMatch) {
-            categoryPath = categoryMatch[1];
+        // 方法1: 从 JSON-LD BreadcrumbList 提取
+        try {
+            const jsonLdMatches = html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+            for (const match of jsonLdMatches) {
+                try {
+                    const data = JSON.parse(match[1]);
+                    const items = Array.isArray(data) ? data : [data];
+                    for (const item of items) {
+                        if (item['@type'] === 'BreadcrumbList' && item.itemListElement) {
+                            const breadcrumbs = item.itemListElement
+                                .sort((a, b) => (a.position || 0) - (b.position || 0))
+                                .map(el => el.name || el.item?.name)
+                                .filter(name => name && name !== 'OZON' && name !== 'Главная');
+                            if (breadcrumbs.length > 0) {
+                                categoryPath = breadcrumbs.join(' > ');
+                                const lastItem = item.itemListElement[item.itemListElement.length - 1];
+                                const itemUrl = lastItem.item?.['@id'] || lastItem.item || '';
+                                const catMatch = itemUrl.match(/category\/[^/]*-(\d+)/);
+                                if (catMatch) categoryId = catMatch[1];
+                                break;
+                            }
+                        }
+                        if (item['@type'] === 'Product' && item.category && !categoryPath) {
+                            categoryPath = item.category;
+                        }
+                    }
+                } catch (e) {}
+            }
+        } catch (e) {}
+        
+        // 方法2: 从页面 JSON 数据提取
+        if (!categoryPath) {
+            const breadcrumbPatterns = [
+                /"breadCrumbs":\s*(\[[\s\S]*?\])/,
+                /"categoryPath":\s*"([^"]+)"/,
+                /"category":\s*"([^"]+)"/,
+            ];
+            for (const pattern of breadcrumbPatterns) {
+                const match = html.match(pattern);
+                if (match) {
+                    if (pattern.source.includes('breadCrumbs')) {
+                        try {
+                            const arr = JSON.parse(match[1]);
+                            const names = arr
+                                .map(item => item.name || item.title || item.text || item)
+                                .filter(n => typeof n === 'string' && n !== 'OZON' && n !== 'Главная');
+                            if (names.length > 0) {
+                                categoryPath = names.join(' > ');
+                            }
+                        } catch (e) {}
+                    } else {
+                        categoryPath = match[1];
+                    }
+                    if (categoryPath) break;
+                }
+            }
         }
         
-        // 从 DOM 面包屑提取
+        // 方法3: 从 DOM 面包屑提取
         if (!categoryPath) {
-            const breadcrumbs = doc.querySelectorAll('[data-widget="breadcrumbs"] a, nav a');
-            if (breadcrumbs.length > 0) {
-                const categories = Array.from(breadcrumbs)
-                    .map(a => a.textContent.trim())
-                    .filter(t => t && t !== 'Главная' && t !== 'OZON' && t.length < 50);
-                if (categories.length > 0) {
-                    categoryPath = categories.join(' > ');
+            const breadcrumbSelectors = [
+                '[data-widget="breadCrumbs"] a',
+                '[data-widget="breadcrumbs"] a',
+                '[data-widget="webBreadcrumbs"] a',
+                'nav[aria-label="breadcrumb"] a',
+                '[class*="breadcrumb"] a',
+                '[class*="Breadcrumb"] a',
+            ];
+            for (const selector of breadcrumbSelectors) {
+                const breadcrumbs = doc.querySelectorAll(selector);
+                if (breadcrumbs.length > 1) {
+                    const categories = Array.from(breadcrumbs)
+                        .map(a => a.textContent.trim())
+                        .filter(t => t && t.length > 0 && t.length < 100 && t !== 'Главная' && t !== 'OZON' && t !== 'Ozon');
+                    if (categories.length > 0) {
+                        categoryPath = categories.join(' > ');
+                        const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
+                        const href = lastBreadcrumb?.getAttribute('href') || '';
+                        const catMatch = href.match(/category\/[^/]*-(\d+)/);
+                        if (catMatch) categoryId = catMatch[1];
+                        break;
+                    }
                 }
             }
         }
 
-        // 提取分类ID
-        const categoryIdMatch = html.match(/"categoryId":\s*"?(\d+)/) ||
-                               url.match(/category\/[^/]*-(\d+)/);
-        if (categoryIdMatch) {
-            categoryId = categoryIdMatch[1];
+        // 提取分类ID（如果还没有）
+        if (!categoryId) {
+            const categoryIdMatch = html.match(/"categoryId":\s*"?(\d+)"?/) ||
+                                   html.match(/"category_id":\s*"?(\d+)"?/) ||
+                                   url.match(/category\/[^/]*-(\d+)/);
+            if (categoryIdMatch) {
+                categoryId = categoryIdMatch[1];
+            }
+        }
+
+        // 提取商品上架时间
+        let listedAt = null;
+        
+        // 方法1: 从 registrationDate 字段提取（Ozon 主要使用这个字段）
+        const regDateMatch = html.match(/"registrationDate":\s*"([^"]+)"/);
+        if (regDateMatch) {
+            try {
+                const date = new Date(regDateMatch[1]);
+                if (!isNaN(date.getTime())) {
+                    listedAt = date.toISOString().split('T')[0];
+                }
+            } catch (e) {}
+        }
+        
+        // 方法2: 从其他可能的日期字段提取
+        if (!listedAt) {
+            const datePatterns = [
+                /"createdAt":\s*"([^"]+)"/,
+                /"listingDate":\s*"([^"]+)"/,
+                /"publishDate":\s*"([^"]+)"/,
+                /"firstAppearanceDate":\s*"([^"]+)"/,
+            ];
+            for (const pattern of datePatterns) {
+                const match = html.match(pattern);
+                if (match) {
+                    try {
+                        const date = new Date(match[1]);
+                        if (!isNaN(date.getTime())) {
+                            listedAt = date.toISOString().split('T')[0];
+                            break;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+        
+        // 方法3: 从页面文本提取 "на Ozon с" (在Ozon上自...)
+        if (!listedAt) {
+            const ruMonths = {
+                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
+                'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
+                'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
+            };
+            
+            const ozonSinceMatch = html.match(/на\s+Ozon\s+с\s+(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+            if (ozonSinceMatch) {
+                const day = ozonSinceMatch[1].padStart(2, '0');
+                const monthRu = ozonSinceMatch[2].toLowerCase();
+                const year = ozonSinceMatch[3];
+                const month = ruMonths[monthRu];
+                if (month) {
+                    listedAt = `${year}-${month}-${day}`;
+                }
+            }
         }
 
         return {
@@ -609,6 +1111,7 @@
             review_count: reviewCount,
             estimated_sales: estimatedSales,
             availability_status: availabilityStatus,
+            listed_at: listedAt,  // 商品上架时间
             snapshot_date: new Date().toISOString().split('T')[0],
             data_source: 'detail_page',
         };
@@ -800,14 +1303,25 @@
                     scrapedCount++;
                     pageScraped++;
                     
-                    if (CONFIG.onlySaveWithSales && (!product.review_count || product.review_count < CONFIG.minReviewCount)) {
-                        log(`跳过 #${absoluteRank}: ${product.platform_product_id} (评论:${product.review_count || 0})`);
+                    await enrichWithSalesData(product);
+
+
+                    
+                    if (shouldSkipProduct(product)) {
+
+                    
+                        log(`skip #${absoluteRank}: ${product.platform_product_id} (sold_count:${product.sold_count || 0}, review:${product.review_count || 0})`);
+
+                    
                         skippedCount++;
+
+                    
                     } else {
                         try {
                             await sendToBackend('/market/snapshots/ingest', [product]);
                             savedCount++;
-                            log(`✓ #${absoluteRank} ${product.platform_product_id} | ${product.brand || '-'} | ${product.review_count}评`);
+                            const catInfo = product.category_path ? product.category_path.substring(0, 25) : '-';
+                            log(`✓ #${absoluteRank} ${product.platform_product_id} | ${catInfo} | ${product.review_count}评`);
                         } catch (error) {
                             log(`保存失败: ${error.message}`);
                         }
@@ -1102,7 +1616,7 @@
         container.innerHTML = `
             <div class="panel">
                 <button class="collapse-btn" id="collapse-btn">−</button>
-                <div class="title">🛒 Ozon Auto Scraper v2.2</div>
+                <div class="title">🛒 Ozon Auto Scraper v2.7</div>
                 
                 <div id="panel-content">
                     <div class="btn-row">
@@ -1118,6 +1632,7 @@
                     <div class="btn-row">
                         <button class="secondary" id="btn-schedule">⏰ 定时(每${CONFIG.scheduleIntervalHours}h)</button>
                         <button class="secondary" id="btn-test">🔗 测试</button>
+                        <button class="secondary" id="btn-debug">🔍 调试</button>
                     </div>
                     
                     <div class="stats">
@@ -1170,7 +1685,123 @@
             }
         };
         document.getElementById('btn-test').onclick = testConnection;
+        document.getElementById('btn-debug').onclick = debugPageData;
         document.getElementById('collapse-btn').onclick = togglePanel;
+    }
+    
+    // 调试功能：分析页面上的日期和商品数据
+    function debugPageData() {
+        log('=== 调试：分析当前页面数据 ===');
+        
+        const html = document.documentElement.innerHTML;
+        
+        // 1. 搜索所有可能的日期字段
+        log('--- 搜索日期字段 ---');
+        const datePatterns = [
+            { name: 'createdAt', pattern: /"createdAt":\s*"?([^",}]+)"?/g },
+            { name: 'datePublished', pattern: /"datePublished":\s*"?([^",}]+)"?/g },
+            { name: 'publishDate', pattern: /"publishDate":\s*"?([^",}]+)"?/g },
+            { name: 'listingDate', pattern: /"listingDate":\s*"?([^",}]+)"?/g },
+            { name: 'firstSaleDate', pattern: /"firstSaleDate":\s*"?([^",}]+)"?/g },
+            { name: 'releaseDate', pattern: /"releaseDate":\s*"?([^",}]+)"?/g },
+            { name: 'dateCreated', pattern: /"dateCreated":\s*"?([^",}]+)"?/g },
+            { name: 'registrationDate', pattern: /"registrationDate":\s*"?([^",}]+)"?/g },
+            { name: 'addedDate', pattern: /"addedDate":\s*"?([^",}]+)"?/g },
+            { name: 'onSaleDate', pattern: /"onSaleDate":\s*"?([^",}]+)"?/g },
+            { name: 'productionDate', pattern: /"productionDate":\s*"?([^",}]+)"?/g },
+            { name: 'startDate', pattern: /"startDate":\s*"?([^",}]+)"?/g },
+            { name: 'availableFrom', pattern: /"availableFrom":\s*"?([^",}]+)"?/g },
+            { name: 'firstAppearance', pattern: /"firstAppearance[^"]*":\s*"?([^",}]+)"?/g },
+            { name: 'timestamp', pattern: /"timestamp":\s*"?(\d{10,13})"?/g },
+            { name: 'created', pattern: /"created":\s*"?([^",}]+)"?/g },
+        ];
+        
+        let foundDates = [];
+        for (const { name, pattern } of datePatterns) {
+            const matches = [...html.matchAll(pattern)];
+            if (matches.length > 0) {
+                for (const m of matches.slice(0, 3)) {  // 只显示前3个
+                    log(`  ${name}: ${m[1]}`);
+                    foundDates.push({ name, value: m[1] });
+                }
+            }
+        }
+        
+        if (foundDates.length === 0) {
+            log('  未找到任何日期字段');
+        }
+        
+        // 2. 搜索俄语日期文本
+        log('--- 搜索俄语日期文本 ---');
+        const ruDatePatterns = [
+            /на\s+Ozon\s+с\s+(\d{1,2}\s+\w+\s+\d{4})/gi,
+            /на\s+сайте\s+с\s+(\d{1,2}\s+\w+\s+\d{4})/gi,
+            /добавлено?\s+(\d{1,2}\s+\w+\s+\d{4})/gi,
+            /дата\s+публикации[:\s]+(\d{1,2}\s+\w+\s+\d{4})/gi,
+            /(\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4})/gi,
+        ];
+        
+        let foundRuDates = [];
+        for (const pattern of ruDatePatterns) {
+            const matches = [...html.matchAll(pattern)];
+            for (const m of matches.slice(0, 3)) {
+                log(`  俄语日期: ${m[0]}`);
+                foundRuDates.push(m[0]);
+            }
+        }
+        
+        if (foundRuDates.length === 0) {
+            log('  未找到俄语日期文本');
+        }
+        
+        // 3. 分析 JSON-LD
+        log('--- JSON-LD 数据 ---');
+        const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+        log(`  找到 ${jsonLdScripts.length} 个 JSON-LD 脚本`);
+        for (let i = 0; i < jsonLdScripts.length; i++) {
+            try {
+                const data = JSON.parse(jsonLdScripts[i].textContent);
+                const type = data['@type'] || (Array.isArray(data) ? data.map(d => d['@type']).join(',') : 'unknown');
+                log(`  [${i}] @type: ${type}`);
+                
+                // 显示 Product 类型的详细信息
+                const items = Array.isArray(data) ? data : [data];
+                for (const item of items) {
+                    if (item['@type'] === 'Product') {
+                        log(`    - name: ${item.name?.substring(0, 50)}...`);
+                        log(`    - brand: ${item.brand?.name || item.brand || '-'}`);
+                        log(`    - datePublished: ${item.datePublished || '-'}`);
+                        log(`    - dateCreated: ${item.dateCreated || '-'}`);
+                        log(`    - releaseDate: ${item.releaseDate || '-'}`);
+                    }
+                }
+            } catch (e) {
+                log(`  [${i}] 解析失败: ${e.message}`);
+            }
+        }
+        
+        // 4. 搜索包含 "date" 的所有键
+        log('--- 搜索含"date"的字段 ---');
+        const dateKeyPattern = /"([^"]*date[^"]*)":\s*"?([^",}\]]+)"?/gi;
+        const dateKeyMatches = [...html.matchAll(dateKeyPattern)].slice(0, 10);
+        for (const m of dateKeyMatches) {
+            log(`  ${m[1]}: ${m[2]}`);
+        }
+        
+        // 5. 搜索时间戳 (10位或13位数字)
+        log('--- 搜索时间戳 ---');
+        const timestampPattern = /:\s*(\d{10,13})[,}\]]/g;
+        const timestamps = [...html.matchAll(timestampPattern)].slice(0, 5);
+        for (const m of timestamps) {
+            const ts = parseInt(m[1]);
+            const date = new Date(ts > 9999999999 ? ts : ts * 1000);
+            if (date.getFullYear() >= 2020 && date.getFullYear() <= 2030) {
+                log(`  ${m[1]} -> ${date.toISOString().split('T')[0]}`);
+            }
+        }
+        
+        log('=== 调试完成 ===');
+        log('请将上面的信息告诉我，以便改进日期提取逻辑');
     }
     
     // 定时任务使用分类遍历模式
@@ -1268,7 +1899,7 @@
         // 加载保存的分类URL
         loadCategoryUrls();
         
-        log(`Ozon Auto Scraper v2.2 已加载`);
+        log(`Ozon Auto Scraper v2.7 已加载`);
         log(`分类数: ${CATEGORY_URLS.length} | 定时: 每${CONFIG.scheduleIntervalHours}小时`);
         
         if (document.readyState === 'complete') {
@@ -1317,6 +1948,48 @@
             // 不自动恢复定时，需要用户手动启动
         }
     }
+
+    // 测试函数：获取Ozon官方销量数据
+    globalWindow.fetchOzonSalesData = async function(sku, requestId, callback, apiType = "sales") {
+        const companyId = resolveOzonCompanyId();
+        if (!companyId) {
+            const msg = 'Missing companyId. Call setOzonCompanyId("YOUR_ID") first or open seller.ozon.ru.';
+            console.error('[OzonAutoScraper]', msg);
+            return { error: msg };
+        }
+        const url = "https://seller.ozon.ru/api/site/seller-analytics/what_to_sell/data/v3";
+        const body = {
+            limit: "50",
+            offset: "0",
+            filter: {
+                stock: "any_stock",
+                period: "monthly",
+                categories: [],
+                sku: sku
+            },
+            sort: { key: "sum_gmv_desc" }
+        };
+
+        console.log('[OzonAutoScraper] Request Ozon seller API...');
+        console.log('[OzonAutoScraper] SKU:', sku);
+        console.log('[OzonAutoScraper] Company ID:', companyId);
+
+        try {
+            const data = await gmPostJson(url, body, {
+                "x-o3-company-id": companyId,
+                "x-o3-language": "zh-Hans"
+            });
+            if (typeof callback === 'function') {
+                callback(data, requestId, apiType);
+            }
+            console.log('[OzonAutoScraper] Ozon seller API response:', data);
+            return data;
+        } catch (error) {
+            console.error('[OzonAutoScraper] API request failed:', error);
+            return { error: error.message };
+        }
+    };
+    globalWindow.x8 = globalWindow.fetchOzonSalesData;
 
     init();
 })();

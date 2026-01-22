@@ -15,7 +15,7 @@ const WarehouseList = () => {
     setLoading(true)
     try {
       const result = await warehouseApi.list()
-      setData(result || [])
+      setData(result?.data || [])
     } catch (error) {
       message.error('\u52a0\u8f7d\u6570\u636e\u5931\u8d25')
     } finally {

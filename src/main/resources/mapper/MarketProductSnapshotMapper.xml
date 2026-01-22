@@ -10,6 +10,26 @@
         <result column="price" property="price" jdbcType="DECIMAL"/>
         <result column="rating" property="rating" jdbcType="DECIMAL"/>
         <result column="review_count" property="reviewCount" jdbcType="INTEGER"/>
+        <result column="sold_count" property="soldCount" jdbcType="INTEGER"/>
+        <result column="sold_sum" property="soldSum" jdbcType="DECIMAL"/>
+        <result column="gmv_sum" property="gmvSum" jdbcType="DECIMAL"/>
+        <result column="avg_price" property="avgPrice" jdbcType="DECIMAL"/>
+        <result column="avg_gmv" property="avgGmv" jdbcType="DECIMAL"/>
+        <result column="views" property="views" jdbcType="INTEGER"/>
+        <result column="session_count" property="sessionCount" jdbcType="INTEGER"/>
+        <result column="conv_to_cart" property="convToCart" jdbcType="DECIMAL"/>
+        <result column="conv_view_to_order" property="convViewToOrder" jdbcType="DECIMAL"/>
+        <result column="stock" property="stock" jdbcType="INTEGER"/>
+        <result column="fbo_stock" property="fboStock" jdbcType="INTEGER"/>
+        <result column="fbs_stock" property="fbsStock" jdbcType="INTEGER"/>
+        <result column="cb_stock" property="cbStock" jdbcType="INTEGER"/>
+        <result column="retail_stock" property="retailStock" jdbcType="INTEGER"/>
+        <result column="sales_dynamics" property="salesDynamics" jdbcType="DECIMAL"/>
+        <result column="min_seller_price" property="minSellerPrice" jdbcType="DECIMAL"/>
+        <result column="sales_period" property="salesPeriod" jdbcType="VARCHAR"/>
+        <result column="sales_update_at" property="salesUpdateAt" jdbcType="TIMESTAMP"/>
+        <result column="item_payload_json" property="itemPayloadJson" jdbcType="LONGVARCHAR"/>
+        <result column="benchmark_json" property="benchmarkJson" jdbcType="LONGVARCHAR"/>
         <result column="availability_status" property="availabilityStatus" jdbcType="VARCHAR"/>
         <result column="stock_hint" property="stockHint" jdbcType="VARCHAR"/>
         <result column="category_rank" property="categoryRank" jdbcType="INTEGER"/>
@@ -20,6 +40,10 @@
 
     <sql id="Base_Column_List">
         id, platform, platform_product_id, snapshot_date, price, rating, review_count,
+        sold_count, sold_sum, gmv_sum, avg_price, avg_gmv, views, session_count,
+        conv_to_cart, conv_view_to_order, stock, fbo_stock, fbs_stock, cb_stock, retail_stock,
+        sales_dynamics, min_seller_price, sales_period, sales_update_at,
+        item_payload_json, benchmark_json,
         availability_status, stock_hint, category_rank, search_rank, data_source, created_at
     </sql>
 
@@ -34,15 +58,43 @@
     <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketProductSnapshot">
         INSERT INTO market_product_snapshot (
             platform, platform_product_id, snapshot_date, price, rating, review_count,
+            sold_count, sold_sum, gmv_sum, avg_price, avg_gmv, views, session_count,
+            conv_to_cart, conv_view_to_order, stock, fbo_stock, fbs_stock, cb_stock, retail_stock,
+            sales_dynamics, min_seller_price, sales_period, sales_update_at,
+            item_payload_json, benchmark_json,
             availability_status, stock_hint, category_rank, search_rank, data_source, created_at
         ) VALUES (
             #{platform}, #{platformProductId}, #{snapshotDate}, #{price}, #{rating}, #{reviewCount},
+            #{soldCount}, #{soldSum}, #{gmvSum}, #{avgPrice}, #{avgGmv}, #{views}, #{sessionCount},
+            #{convToCart}, #{convViewToOrder}, #{stock}, #{fboStock}, #{fbsStock}, #{cbStock}, #{retailStock},
+            #{salesDynamics}, #{minSellerPrice}, #{salesPeriod}, #{salesUpdateAt},
+            #{itemPayloadJson}, #{benchmarkJson},
             #{availabilityStatus}, #{stockHint}, #{categoryRank}, #{searchRank}, #{dataSource}, #{createdAt}
         )
         ON DUPLICATE KEY UPDATE
             price = VALUES(price),
             rating = VALUES(rating),
             review_count = VALUES(review_count),
+            sold_count = VALUES(sold_count),
+            sold_sum = VALUES(sold_sum),
+            gmv_sum = VALUES(gmv_sum),
+            avg_price = VALUES(avg_price),
+            avg_gmv = VALUES(avg_gmv),
+            views = VALUES(views),
+            session_count = VALUES(session_count),
+            conv_to_cart = VALUES(conv_to_cart),
+            conv_view_to_order = VALUES(conv_view_to_order),
+            stock = VALUES(stock),
+            fbo_stock = VALUES(fbo_stock),
+            fbs_stock = VALUES(fbs_stock),
+            cb_stock = VALUES(cb_stock),
+            retail_stock = VALUES(retail_stock),
+            sales_dynamics = VALUES(sales_dynamics),
+            min_seller_price = VALUES(min_seller_price),
+            sales_period = VALUES(sales_period),
+            sales_update_at = VALUES(sales_update_at),
+            item_payload_json = VALUES(item_payload_json),
+            benchmark_json = VALUES(benchmark_json),
             availability_status = VALUES(availability_status),
             stock_hint = VALUES(stock_hint),
             category_rank = VALUES(category_rank),

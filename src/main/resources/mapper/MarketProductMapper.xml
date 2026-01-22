@@ -12,6 +12,7 @@
         <result column="brand" property="brand" jdbcType="VARCHAR"/>
         <result column="category_id" property="categoryId" jdbcType="VARCHAR"/>
         <result column="category_path" property="categoryPath" jdbcType="VARCHAR"/>
+        <result column="listed_at" property="listedAt" jdbcType="DATE"/>
         <result column="first_seen_at" property="firstSeenAt" jdbcType="TIMESTAMP"/>
         <result column="last_seen_at" property="lastSeenAt" jdbcType="TIMESTAMP"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
@@ -20,7 +21,7 @@
 
     <sql id="Base_Column_List">
         id, platform, market, platform_product_id, platform_sku_id, title, brand, category_id,
-        category_path, first_seen_at, last_seen_at, created_at, updated_at
+        category_path, listed_at, first_seen_at, last_seen_at, created_at, updated_at
     </sql>
 
     <select id="selectByPlatformAndProductId" resultMap="BaseResultMap">
@@ -33,10 +34,10 @@
     <insert id="upsert" parameterType="com.example.shopeeerp.pojo.MarketProduct">
         INSERT INTO market_product (
             platform, market, platform_product_id, platform_sku_id, title, brand,
-            category_id, category_path, first_seen_at, last_seen_at, created_at, updated_at
+            category_id, category_path, listed_at, first_seen_at, last_seen_at, created_at, updated_at
         ) VALUES (
             #{platform}, #{market}, #{platformProductId}, #{platformSkuId}, #{title}, #{brand},
-            #{categoryId}, #{categoryPath}, #{firstSeenAt}, #{lastSeenAt}, #{createdAt}, #{updatedAt}
+            #{categoryId}, #{categoryPath}, #{listedAt}, #{firstSeenAt}, #{lastSeenAt}, #{createdAt}, #{updatedAt}
         )
         ON DUPLICATE KEY UPDATE
             market = VALUES(market),
@@ -45,8 +46,71 @@
             brand = VALUES(brand),
             category_id = VALUES(category_id),
             category_path = VALUES(category_path),
-            first_seen_at = IFNULL(first_seen_at, VALUES(first_seen_at)),
+            listed_at = COALESCE(VALUES(listed_at), listed_at),
+            first_seen_at = LEAST(IFNULL(first_seen_at, VALUES(first_seen_at)), VALUES(first_seen_at)),
             last_seen_at = VALUES(last_seen_at),
             updated_at = VALUES(updated_at)
     </insert>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_product
+        <where>
+            <if test="platform != null and platform != ''">
+                AND platform = #{platform}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%')
+                     OR platform_product_id LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="brand != null and brand != ''">
+                AND brand = #{brand}
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND category_id = #{categoryId}
+            </if>
+        </where>
+        ORDER BY last_seen_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(*)
+        FROM market_product
+        <where>
+            <if test="platform != null and platform != ''">
+                AND platform = #{platform}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%')
+                     OR platform_product_id LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="brand != null and brand != ''">
+                AND brand = #{brand}
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectDistinctBrands" resultType="string">
+        SELECT DISTINCT brand
+        FROM market_product
+        WHERE brand IS NOT NULL AND brand != ''
+        <if test="platform != null and platform != ''">
+            AND platform = #{platform}
+        </if>
+        ORDER BY brand
+    </select>
+
+    <select id="selectDistinctCategories" resultType="string">
+        SELECT DISTINCT category_path
+        FROM market_product
+        WHERE category_path IS NOT NULL AND category_path != ''
+        <if test="platform != null and platform != ''">
+            AND platform = #{platform}
+        </if>
+        ORDER BY category_path
+    </select>
 </mapper>

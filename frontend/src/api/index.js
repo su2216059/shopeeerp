@@ -1,5 +1,14 @@
 import request from '../utils/request'
 
+// 认证相关API
+export const authApi = {
+  login: (data) => request.post('/api/auth/login', data),
+  register: (data) => request.post('/api/auth/register', data),
+  logout: () => request.post('/api/auth/logout'),
+  getCurrentUser: () => request.get('/api/auth/me'),
+  changePassword: (data) => request.post('/api/auth/change-password', data),
+}
+
 // 客户相关API
 export const customerApi = {
   list: () => request.get('/customers'),
@@ -141,4 +150,67 @@ export const roleApi = {
   create: (data) => request.post('/roles', data),
   update: (id, data) => request.put(`/roles/${id}`, data),
   delete: (id) => request.delete(`/roles/${id}`),
+}
+
+// 市场信号相关API
+export const marketSignalApi = {
+  // 商品快照
+  ingestSnapshots: (data) => request.post('/market/snapshots/ingest', data),
+  
+  // 销量估算
+  getEstimate: (platform, productId, periodType = 'weekly') => 
+    request.get(`/market/estimate/${platform}/${productId}`, { params: { periodType } }),
+  getEstimateHistory: (platform, productId, periodType = 'weekly', limit = 10) => 
+    request.get(`/market/estimate/${platform}/${productId}/history`, { params: { periodType, limit } }),
+  getTrendSignal: (platform, productId) => 
+    request.get(`/market/estimate/${platform}/${productId}/trend`),
+  
+  // 批量计算
+  calculateDaily: (platform, date) =>
+    request.post('/market/estimate/calculate-daily', null, { params: { platform, date } }),
+  calculateWeekly: (platform, weekEndDate) =>
+    request.post('/market/estimate/calculate-weekly', null, { params: { platform, weekEndDate } }),
+  calculateMonthly: (platform, monthEndDate) =>
+    request.post('/market/estimate/calculate-monthly', null, { params: { platform, monthEndDate } }),
+  calculateTrend: (platform, date) =>
+    request.post('/market/estimate/calculate-trend', null, { params: { platform, date } }),
+}
+
+// 市场商品相关API
+export const marketProductApi = {
+  list: (params) => request.get('/market/products', { params }),
+  getById: (platform, productId) => request.get(`/market/products/${platform}/${productId}`),
+  getSnapshots: (platform, productId, params) =>
+    request.get(`/market/products/${platform}/${productId}/snapshots`, { params }),
+  getFilters: (platform) => request.get('/market/products/filters', { params: { platform } }),
+  getTrending: (params) => request.get('/market/products/trending', { params }),
+  ozonSalesProxy: (data) => request.post('/market/products/ozon-sales-proxy', data),
+}
+
+// 店铺管理API
+export const shopApi = {
+  // 店铺CRUD
+  list: () => request.get('/api/shops'),
+  getById: (id) => request.get(`/api/shops/${id}`),
+  create: (data) => request.post('/api/shops', data),
+  update: (id, data) => request.put(`/api/shops/${id}`, data),
+  delete: (id) => request.delete(`/api/shops/${id}`),
+  getDefault: () => request.get('/api/shops/default'),
+  getByPlatform: (platform) => request.get(`/api/shops/platform/${platform}`),
+  
+  // 凭证管理
+  getCredential: (shopId) => request.get(`/api/shops/${shopId}/credential`),
+  saveCredential: (shopId, data) => request.post(`/api/shops/${shopId}/credential`, data),
+  verifyCredential: (shopId) => request.post(`/api/shops/${shopId}/credential/verify`),
+  
+  // 账号管理
+  getAccounts: (shopId) => request.get(`/api/shops/${shopId}/accounts`),
+  addAccount: (shopId, data) => request.post(`/api/shops/${shopId}/accounts`, data),
+  updateAccount: (shopId, accountId, data) => request.put(`/api/shops/${shopId}/accounts/${accountId}`, data),
+  deleteAccount: (shopId, accountId) => request.delete(`/api/shops/${shopId}/accounts/${accountId}`),
+  getAccountDetail: (shopId, accountId) => request.get(`/api/shops/${shopId}/accounts/${accountId}/detail`),
+  
+  // 店铺切换
+  switchShop: (shopId) => request.post(`/api/shops/${shopId}/switch`),
+  getCurrentShop: () => request.get('/api/shops/current'),
 }

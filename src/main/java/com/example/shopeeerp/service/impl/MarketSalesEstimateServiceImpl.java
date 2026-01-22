@@ -21,37 +21,17 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * 销量估算服务实现
- * 
- * 算法说明（v1_review_rank）:
- * 
- * 1. 评论增量法（核心）:
- *    review_delta = review_count(end) - review_count(start)
- *    estimated_sales_min = review_delta / 0.06  (6%评论率)
- *    estimated_sales_max = review_delta / 0.02  (2%评论率)
- * 
- * 2. 排名权重修正:
- *    rank <= 10  -> 1.4
- *    rank <= 50  -> 1.2
- *    rank <= 200 -> 1.0
- *    else        -> 0.8
- * 
- * 3. 置信度评分:
- *    = 0.4 * data_density_score
- *    + 0.3 * review_stability_score
- *    + 0.3 * stock_consistency_score
+ * Sales estimate based on sold_count.
  */
+
 @Service
 public class MarketSalesEstimateServiceImpl implements MarketSalesEstimateService {
 
     private static final Logger log = LoggerFactory.getLogger(MarketSalesEstimateServiceImpl.class);
 
-    // 评论转化率范围
-    private static final double REVIEW_RATE_MIN = 0.02;  // 2% 最低评论率 -> 最高销量
-    private static final double REVIEW_RATE_MAX = 0.06;  // 6% 最高评论率 -> 最低销量
-
-    // 估算模型版本
-    private static final String ESTIMATION_MODEL = "v1_review_rank";
+    // 评论转化率范围 (Ozon 实际数据 - 按月计算)
+    // estimation model version
+    private static final String ESTIMATION_MODEL = "v3_ozon_sales";
 
     @Autowired
     private MarketProductSnapshotMapper snapshotMapper;
@@ -75,41 +55,16 @@ public class MarketSalesEstimateServiceImpl implements MarketSalesEstimateServic
             return null;
         }
 
-        // 获取首尾快照
-        MarketProductSnapshot firstSnapshot = snapshots.get(0);
-        MarketProductSnapshot lastSnapshot = snapshots.get(snapshots.size() - 1);
-
-        // 计算评论增量
-        int reviewDelta = 0;
-        if (firstSnapshot.getReviewCount() != null && lastSnapshot.getReviewCount() != null) {
-            reviewDelta = lastSnapshot.getReviewCount() - firstSnapshot.getReviewCount();
+        Integer resolvedSales = resolveSalesCount(snapshots, periodType, periodStart, periodEnd);
+        if (resolvedSales == null) {
+            log.debug("No sales data for product {} in period {}-{}", platformProductId, periodStart, periodEnd);
+            return null;
         }
 
-        // 如果评论没有增量，使用绝对值估算
-        if (reviewDelta <= 0 && lastSnapshot.getReviewCount() != null && lastSnapshot.getReviewCount() > 0) {
-            // 对于无增量的情况，基于总评论数估算周期内销量
-            long periodDays = ChronoUnit.DAYS.between(periodStart, periodEnd) + 1;
-            double dailyFactor = periodDays / 365.0;  // 假设评论是年累计
-            reviewDelta = (int) (lastSnapshot.getReviewCount() * dailyFactor);
-        }
+        int estimatedMin = Math.max(0, resolvedSales);
+        int estimatedMid = estimatedMin;
+        int estimatedMax = estimatedMin;
 
-        // 评论增量法计算销量区间
-        int estimatedMin = (int) Math.round(reviewDelta / REVIEW_RATE_MAX);
-        int estimatedMax = (int) Math.round(reviewDelta / REVIEW_RATE_MIN);
-
-        // 确保最小值不为负
-        estimatedMin = Math.max(0, estimatedMin);
-        estimatedMax = Math.max(estimatedMin, estimatedMax);
-
-        // 排名权重修正
-        double rankWeight = calculateRankWeight(lastSnapshot.getCategoryRank());
-        estimatedMin = (int) Math.round(estimatedMin * rankWeight);
-        estimatedMax = (int) Math.round(estimatedMax * rankWeight);
-
-        // 计算中位值
-        int estimatedMid = (estimatedMin + estimatedMax) / 2;
-
-        // 计算置信度
         int confidenceScore = calculateConfidenceScore(platform, platformProductId, periodStart, periodEnd, snapshots);
 
         // 构建结果
@@ -136,27 +91,54 @@ public class MarketSalesEstimateServiceImpl implements MarketSalesEstimateServic
     }
 
     /**
-     * 计算排名权重
+     * 根据价格获取评论率范围
+     * 低价商品评论率高，高价商品评论率低
+     * 
+     * @return [低评论率, 中位评论率, 高评论率]
      */
-    private double calculateRankWeight(Integer categoryRank) {
-        if (categoryRank == null) {
-            return 1.0;
+    private Integer resolveSalesCount(List<MarketProductSnapshot> snapshots, String periodType,
+                                      LocalDate periodStart, LocalDate periodEnd) {
+        if (snapshots == null || snapshots.isEmpty()) {
+            return null;
         }
-        if (categoryRank <= 10) {
-            return 1.4;
-        } else if (categoryRank <= 50) {
-            return 1.2;
-        } else if (categoryRank <= 200) {
-            return 1.0;
-        } else {
-            return 0.8;
+        MarketProductSnapshot latest = snapshots.get(snapshots.size() - 1);
+        Integer base = latest.getSoldCount();
+        if (base == null) {
+            return null;
         }
+        String sourcePeriod = latest.getSalesPeriod();
+        if (sourcePeriod == null || periodType == null || sourcePeriod.equalsIgnoreCase(periodType)) {
+            return base;
+        }
+        int sourceDays = resolvePeriodDays(sourcePeriod, latest, periodEnd);
+        int targetDays = (int) (ChronoUnit.DAYS.between(periodStart, periodEnd) + 1);
+        if (sourceDays <= 0 || targetDays <= 0) {
+            return base;
+        }
+        return (int) Math.round((double) base * targetDays / sourceDays);
     }
 
-    /**
-     * 计算置信度评分
-     * = 0.4 * 数据密度 + 0.3 * 评论稳定性 + 0.3 * 库存一致性
-     */
+    private int resolvePeriodDays(String period, MarketProductSnapshot snapshot, LocalDate periodEnd) {
+        if (period == null) {
+            return 0;
+        }
+        String normalized = period.trim().toLowerCase();
+        if ("weekly".equals(normalized)) {
+            return 7;
+        }
+        if ("daily".equals(normalized)) {
+            return 1;
+        }
+        if ("monthly".equals(normalized)) {
+            LocalDate ref = periodEnd;
+            if (snapshot.getSalesUpdateAt() != null) {
+                ref = snapshot.getSalesUpdateAt().toLocalDate();
+            }
+            return ref.lengthOfMonth();
+        }
+        return 0;
+    }
+
     private int calculateConfidenceScore(String platform, String platformProductId,
                                          LocalDate periodStart, LocalDate periodEnd,
                                          List<MarketProductSnapshot> snapshots) {
@@ -168,13 +150,13 @@ public class MarketSalesEstimateServiceImpl implements MarketSalesEstimateServic
         int dataDensityScore = (int) Math.min(100, densityRatio * 100);
 
         // 2. 评论稳定性分数（检查是否有异常增长）
-        int reviewStabilityScore = calculateReviewStabilityScore(snapshots);
+        int salesStabilityScore = calculateSalesStabilityScore(snapshots);
 
         // 3. 库存一致性分数（检查断货频率）
         int stockConsistencyScore = calculateStockConsistencyScore(snapshots);
 
         // 加权计算最终置信度
-        int finalScore = (int) (0.4 * dataDensityScore + 0.3 * reviewStabilityScore + 0.3 * stockConsistencyScore);
+        int finalScore = (int) (0.4 * dataDensityScore + 0.4 * salesStabilityScore + 0.2 * stockConsistencyScore);
 
         return Math.min(100, Math.max(0, finalScore));
     }
@@ -182,35 +164,31 @@ public class MarketSalesEstimateServiceImpl implements MarketSalesEstimateServic
     /**
      * 计算评论稳定性分数
      */
-    private int calculateReviewStabilityScore(List<MarketProductSnapshot> snapshots) {
+    private int calculateSalesStabilityScore(List<MarketProductSnapshot> snapshots) {
         if (snapshots.size() < 2) {
-            return 50;  // 数据不足，返回中等分数
+            return 50;
         }
 
         int abnormalCount = 0;
-        Integer prevReviewCount = null;
+        Integer prevSales = null;
 
         for (MarketProductSnapshot snapshot : snapshots) {
-            if (snapshot.getReviewCount() == null) continue;
+            if (snapshot.getSoldCount() == null) continue;
 
-            if (prevReviewCount != null) {
-                int delta = snapshot.getReviewCount() - prevReviewCount;
-                // 如果单日增长超过50条评论，认为异常
-                if (delta > 50) {
+            if (prevSales != null) {
+                int delta = snapshot.getSoldCount() - prevSales;
+                int threshold = Math.max(100, Math.abs(prevSales));
+                if (Math.abs(delta) > threshold) {
                     abnormalCount++;
                 }
             }
-            prevReviewCount = snapshot.getReviewCount();
+            prevSales = snapshot.getSoldCount();
         }
 
-        // 异常比例越低，分数越高
         double abnormalRatio = (double) abnormalCount / snapshots.size();
         return (int) (100 * (1 - abnormalRatio));
     }
 
-    /**
-     * 计算库存一致性分数
-     */
     private int calculateStockConsistencyScore(List<MarketProductSnapshot> snapshots) {
         if (snapshots.isEmpty()) {
             return 50;
@@ -319,22 +297,22 @@ public class MarketSalesEstimateServiceImpl implements MarketSalesEstimateServic
         signal.setCreatedAt(LocalDateTime.now());
 
         // 计算7天趋势
-        if (snapshot7dAgo != null && currentSnapshot.getReviewCount() != null && snapshot7dAgo.getReviewCount() != null) {
-            int reviewDelta7d = currentSnapshot.getReviewCount() - snapshot7dAgo.getReviewCount();
-            if (snapshot7dAgo.getReviewCount() > 0) {
-                double trend7d = (double) reviewDelta7d / snapshot7dAgo.getReviewCount() * 100;
+        if (snapshot7dAgo != null && currentSnapshot.getSoldCount() != null && snapshot7dAgo.getSoldCount() != null) {
+            int salesDelta7d = currentSnapshot.getSoldCount() - snapshot7dAgo.getSoldCount();
+            if (snapshot7dAgo.getSoldCount() > 0) {
+                double trend7d = (double) salesDelta7d / snapshot7dAgo.getSoldCount() * 100;
                 signal.setTrend7d(BigDecimal.valueOf(trend7d).setScale(2, RoundingMode.HALF_UP));
             }
 
             // 评论增长速度（每日）
-            signal.setReviewVelocity(BigDecimal.valueOf(reviewDelta7d / 7.0).setScale(2, RoundingMode.HALF_UP));
+            signal.setReviewVelocity(BigDecimal.valueOf(salesDelta7d / 7.0).setScale(2, RoundingMode.HALF_UP));
         }
 
         // 计算30天趋势
-        if (snapshot30dAgo != null && currentSnapshot.getReviewCount() != null && snapshot30dAgo.getReviewCount() != null) {
-            int reviewDelta30d = currentSnapshot.getReviewCount() - snapshot30dAgo.getReviewCount();
-            if (snapshot30dAgo.getReviewCount() > 0) {
-                double trend30d = (double) reviewDelta30d / snapshot30dAgo.getReviewCount() * 100;
+        if (snapshot30dAgo != null && currentSnapshot.getSoldCount() != null && snapshot30dAgo.getSoldCount() != null) {
+            int salesDelta30d = currentSnapshot.getSoldCount() - snapshot30dAgo.getSoldCount();
+            if (snapshot30dAgo.getSoldCount() > 0) {
+                double trend30d = (double) salesDelta30d / snapshot30dAgo.getSoldCount() * 100;
                 signal.setTrend30d(BigDecimal.valueOf(trend30d).setScale(2, RoundingMode.HALF_UP));
             }
         }

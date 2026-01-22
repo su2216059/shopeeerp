@@ -24,10 +24,22 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
-    return response.data
+    return response
   },
   (error) => {
-    message.error(error.response?.data?.message || '请求失败')
+    // 401 未授权，跳转登录
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      // 避免在登录页循环跳转
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
+      return Promise.reject(error)
+    }
+    
+    // 其他错误显示提示
+    const errorMsg = error.response?.data?.message || '请求失败'
+    message.error(errorMsg)
     return Promise.reject(error)
   }
 )

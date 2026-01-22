@@ -189,18 +189,18 @@ public class MarketScrapeController {
         private String platform;
         private String market;
         @JsonProperty("platform_product_id")
-        @JsonAlias("platformProductId")
+        @JsonAlias({"platformProductId", "sku"})
         private String platformProductId;
         @JsonProperty("platform_sku_id")
-        @JsonAlias("platformSkuId")
+        @JsonAlias({"platformSkuId", "variantId"})
         private String platformSkuId;
         private String title;
         private String brand;
         @JsonProperty("category_id")
-        @JsonAlias("categoryId")
+        @JsonAlias({"categoryId", "category3Id", "category2Id", "category1Id"})
         private String categoryId;
         @JsonProperty("category_path")
-        @JsonAlias("categoryPath")
+        @JsonAlias({"categoryPath", "category3", "category1"})
         private String categoryPath;
         @JsonProperty("snapshot_date")
         @JsonAlias("snapshotDate")
@@ -210,6 +210,62 @@ public class MarketScrapeController {
         @JsonProperty("review_count")
         @JsonAlias("reviewCount")
         private Integer reviewCount;
+        @JsonProperty("sold_count")
+        @JsonAlias("soldCount")
+        private String soldCount;
+        @JsonProperty("sold_sum")
+        @JsonAlias("soldSum")
+        private java.math.BigDecimal soldSum;
+        @JsonProperty("gmv_sum")
+        @JsonAlias("gmvSum")
+        private java.math.BigDecimal gmvSum;
+        @JsonProperty("avg_price")
+        @JsonAlias("avgPrice")
+        private java.math.BigDecimal avgPrice;
+        @JsonProperty("avg_gmv")
+        @JsonAlias("avgGmv")
+        private java.math.BigDecimal avgGmv;
+        private String views;
+        @JsonProperty("session_count")
+        @JsonAlias("sessionCount")
+        private String sessionCount;
+        @JsonProperty("conv_to_cart")
+        @JsonAlias("convToCart")
+        private java.math.BigDecimal convToCart;
+        @JsonProperty("conv_view_to_order")
+        @JsonAlias("convViewToOrder")
+        private java.math.BigDecimal convViewToOrder;
+        private String stock;
+        @JsonProperty("fbo_stock")
+        @JsonAlias("fboStock")
+        private Integer fboStock;
+        @JsonProperty("fbs_stock")
+        @JsonAlias("fbsStock")
+        private Integer fbsStock;
+        @JsonProperty("cb_stock")
+        @JsonAlias("cbStock")
+        private Integer cbStock;
+        @JsonProperty("retail_stock")
+        @JsonAlias("retailStock")
+        private Integer retailStock;
+        @JsonProperty("sales_dynamics")
+        @JsonAlias("salesDynamics")
+        private java.math.BigDecimal salesDynamics;
+        @JsonProperty("min_seller_price")
+        @JsonAlias("minSellerPrice")
+        private java.math.BigDecimal minSellerPrice;
+        @JsonProperty("sales_period")
+        @JsonAlias("salesPeriod")
+        private String salesPeriod;
+        @JsonProperty("sales_update_at")
+        @JsonAlias("salesUpdateAt")
+        private String salesUpdateAt;
+        @JsonProperty("item_payload_json")
+        @JsonAlias("itemPayloadJson")
+        private String itemPayloadJson;
+        @JsonProperty("benchmark_json")
+        @JsonAlias("benchmarkJson")
+        private String benchmarkJson;
         @JsonProperty("availability_status")
         @JsonAlias("availabilityStatus")
         private String availabilityStatus;
@@ -225,6 +281,9 @@ public class MarketScrapeController {
         @JsonProperty("data_source")
         @JsonAlias("dataSource")
         private String dataSource;
+        @JsonProperty("listed_at")
+        @JsonAlias({"listedAt", "nullableCreateDate"})
+        private String listedAt;
 
         public String getPlatform() {
             return platform;
@@ -322,6 +381,166 @@ public class MarketScrapeController {
             this.reviewCount = reviewCount;
         }
 
+        public String getSoldCount() {
+            return soldCount;
+        }
+
+        public void setSoldCount(String soldCount) {
+            this.soldCount = soldCount;
+        }
+
+        public java.math.BigDecimal getSoldSum() {
+            return soldSum;
+        }
+
+        public void setSoldSum(java.math.BigDecimal soldSum) {
+            this.soldSum = soldSum;
+        }
+
+        public java.math.BigDecimal getGmvSum() {
+            return gmvSum;
+        }
+
+        public void setGmvSum(java.math.BigDecimal gmvSum) {
+            this.gmvSum = gmvSum;
+        }
+
+        public java.math.BigDecimal getAvgPrice() {
+            return avgPrice;
+        }
+
+        public void setAvgPrice(java.math.BigDecimal avgPrice) {
+            this.avgPrice = avgPrice;
+        }
+
+        public java.math.BigDecimal getAvgGmv() {
+            return avgGmv;
+        }
+
+        public void setAvgGmv(java.math.BigDecimal avgGmv) {
+            this.avgGmv = avgGmv;
+        }
+
+        public String getViews() {
+            return views;
+        }
+
+        public void setViews(String views) {
+            this.views = views;
+        }
+
+        public String getSessionCount() {
+            return sessionCount;
+        }
+
+        public void setSessionCount(String sessionCount) {
+            this.sessionCount = sessionCount;
+        }
+
+        public java.math.BigDecimal getConvToCart() {
+            return convToCart;
+        }
+
+        public void setConvToCart(java.math.BigDecimal convToCart) {
+            this.convToCart = convToCart;
+        }
+
+        public java.math.BigDecimal getConvViewToOrder() {
+            return convViewToOrder;
+        }
+
+        public void setConvViewToOrder(java.math.BigDecimal convViewToOrder) {
+            this.convViewToOrder = convViewToOrder;
+        }
+
+        public String getStock() {
+            return stock;
+        }
+
+        public void setStock(String stock) {
+            this.stock = stock;
+        }
+
+        public Integer getFboStock() {
+            return fboStock;
+        }
+
+        public void setFboStock(Integer fboStock) {
+            this.fboStock = fboStock;
+        }
+
+        public Integer getFbsStock() {
+            return fbsStock;
+        }
+
+        public void setFbsStock(Integer fbsStock) {
+            this.fbsStock = fbsStock;
+        }
+
+        public Integer getCbStock() {
+            return cbStock;
+        }
+
+        public void setCbStock(Integer cbStock) {
+            this.cbStock = cbStock;
+        }
+
+        public Integer getRetailStock() {
+            return retailStock;
+        }
+
+        public void setRetailStock(Integer retailStock) {
+            this.retailStock = retailStock;
+        }
+
+        public java.math.BigDecimal getSalesDynamics() {
+            return salesDynamics;
+        }
+
+        public void setSalesDynamics(java.math.BigDecimal salesDynamics) {
+            this.salesDynamics = salesDynamics;
+        }
+
+        public java.math.BigDecimal getMinSellerPrice() {
+            return minSellerPrice;
+        }
+
+        public void setMinSellerPrice(java.math.BigDecimal minSellerPrice) {
+            this.minSellerPrice = minSellerPrice;
+        }
+
+        public String getSalesPeriod() {
+            return salesPeriod;
+        }
+
+        public void setSalesPeriod(String salesPeriod) {
+            this.salesPeriod = salesPeriod;
+        }
+
+        public String getSalesUpdateAt() {
+            return salesUpdateAt;
+        }
+
+        public void setSalesUpdateAt(String salesUpdateAt) {
+            this.salesUpdateAt = salesUpdateAt;
+        }
+
+        public String getItemPayloadJson() {
+            return itemPayloadJson;
+        }
+
+        public void setItemPayloadJson(String itemPayloadJson) {
+            this.itemPayloadJson = itemPayloadJson;
+        }
+
+        public String getBenchmarkJson() {
+            return benchmarkJson;
+        }
+
+        public void setBenchmarkJson(String benchmarkJson) {
+            this.benchmarkJson = benchmarkJson;
+        }
+
         public String getAvailabilityStatus() {
             return availabilityStatus;
         }
@@ -362,6 +581,14 @@ public class MarketScrapeController {
             this.dataSource = dataSource;
         }
 
+        public String getListedAt() {
+            return listedAt;
+        }
+
+        public void setListedAt(String listedAt) {
+            this.listedAt = listedAt;
+        }
+
         public MarketSignalIngestService.MarketSnapshotIngestItem toIngestItem() {
             MarketSignalIngestService.MarketSnapshotIngestItem item =
                     new MarketSignalIngestService.MarketSnapshotIngestItem();
@@ -377,11 +604,32 @@ public class MarketScrapeController {
             item.setPrice(price);
             item.setRating(rating);
             item.setReviewCount(reviewCount);
+            item.setSoldCount(soldCount);
+            item.setSoldSum(soldSum);
+            item.setGmvSum(gmvSum);
+            item.setAvgPrice(avgPrice);
+            item.setAvgGmv(avgGmv);
+            item.setViews(views);
+            item.setSessionCount(sessionCount);
+            item.setConvToCart(convToCart);
+            item.setConvViewToOrder(convViewToOrder);
+            item.setStock(stock);
+            item.setFboStock(fboStock);
+            item.setFbsStock(fbsStock);
+            item.setCbStock(cbStock);
+            item.setRetailStock(retailStock);
+            item.setSalesDynamics(salesDynamics);
+            item.setMinSellerPrice(minSellerPrice);
+            item.setSalesPeriod(salesPeriod);
+            item.setSalesUpdateAt(salesUpdateAt);
+            item.setItemPayloadJson(itemPayloadJson);
+            item.setBenchmarkJson(benchmarkJson);
             item.setAvailabilityStatus(availabilityStatus);
             item.setStockHint(stockHint);
             item.setCategoryRank(categoryRank);
             item.setSearchRank(searchRank);
             item.setDataSource(dataSource);
+            item.setListedAt(listedAt);
             return item;
         }
     }

@@ -72,4 +72,40 @@
             review_velocity = VALUES(review_velocity),
             stock_risk_level = VALUES(stock_risk_level)
     </insert>
+
+    <!-- 查询热门上升趋势商品（按7天趋势降序） -->
+    <select id="selectTopTrending" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND signal_date = #{signalDate}
+          AND trend_7d IS NOT NULL
+          AND trend_7d > 0
+        ORDER BY trend_7d DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 查询排名上升最快的商品 -->
+    <select id="selectTopRankRising" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND signal_date = #{signalDate}
+          AND rank_change_7d IS NOT NULL
+          AND rank_change_7d > 0
+        ORDER BY rank_change_7d DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 查询评论增长最快的商品 -->
+    <select id="selectTopReviewVelocity" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_trend_signal
+        WHERE platform = #{platform}
+          AND signal_date = #{signalDate}
+          AND review_velocity IS NOT NULL
+          AND review_velocity > 0
+        ORDER BY review_velocity DESC
+        LIMIT #{limit}
+    </select>
 </mapper>

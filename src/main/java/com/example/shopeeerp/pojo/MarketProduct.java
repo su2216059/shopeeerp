@@ -1,5 +1,6 @@
 package com.example.shopeeerp.pojo;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class MarketProduct {
@@ -12,6 +13,7 @@ public class MarketProduct {
     private String brand;
     private String categoryId;
     private String categoryPath;
+    private LocalDate listedAt;
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
     private LocalDateTime createdAt;
@@ -87,6 +89,14 @@ public class MarketProduct {
 
     public void setCategoryPath(String categoryPath) {
         this.categoryPath = categoryPath;
+    }
+
+    public LocalDate getListedAt() {
+        return listedAt;
+    }
+
+    public void setListedAt(LocalDate listedAt) {
+        this.listedAt = listedAt;
     }
 
     public LocalDateTime getFirstSeenAt() {

@@ -11,13 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Service
 public class MarketSignalIngestServiceImpl implements MarketSignalIngestService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_DATE;
+    private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
     private MarketProductMapper marketProductMapper;
@@ -55,7 +58,15 @@ public class MarketSignalIngestServiceImpl implements MarketSignalIngestService 
             product.setBrand(item.getBrand());
             product.setCategoryId(item.getCategoryId());
             product.setCategoryPath(item.getCategoryPath());
-            product.setFirstSeenAt(now);
+            LocalDate listedDate = parseDateSafe(item.getListedAt());
+
+            // If listedAt is provided, use it as firstSeenAt.
+            LocalDateTime firstSeenAt = now;
+            if (listedDate != null) {
+                firstSeenAt = listedDate.atStartOfDay();
+            }
+            product.setListedAt(listedDate);
+            product.setFirstSeenAt(firstSeenAt);
             product.setLastSeenAt(now);
             product.setCreatedAt(now);
             product.setUpdatedAt(now);
@@ -64,10 +75,35 @@ public class MarketSignalIngestServiceImpl implements MarketSignalIngestService 
             MarketProductSnapshot snapshot = new MarketProductSnapshot();
             snapshot.setPlatform(platform);
             snapshot.setPlatformProductId(item.getPlatformProductId());
-            snapshot.setSnapshotDate(parseDate(item.getSnapshotDate(), today));
-            snapshot.setPrice(item.getPrice());
+            LocalDate snapshotDate = parseDate(item.getSnapshotDate(), today);
+            LocalDate salesUpdateDate = parseDateSafe(item.getSalesUpdateAt());
+            if (isBlank(item.getSnapshotDate()) && salesUpdateDate != null) {
+                snapshotDate = salesUpdateDate;
+            }
+            snapshot.setSnapshotDate(snapshotDate);
+            snapshot.setPrice(item.getPrice() != null ? item.getPrice() : item.getAvgPrice());
             snapshot.setRating(item.getRating());
             snapshot.setReviewCount(item.getReviewCount());
+            snapshot.setSoldCount(parseInt(item.getSoldCount()));
+            snapshot.setSoldSum(item.getSoldSum());
+            snapshot.setGmvSum(item.getGmvSum());
+            snapshot.setAvgPrice(item.getAvgPrice());
+            snapshot.setAvgGmv(item.getAvgGmv());
+            snapshot.setViews(parseInt(item.getViews()));
+            snapshot.setSessionCount(parseInt(item.getSessionCount()));
+            snapshot.setConvToCart(item.getConvToCart());
+            snapshot.setConvViewToOrder(item.getConvViewToOrder());
+            snapshot.setStock(parseInt(item.getStock()));
+            snapshot.setFboStock(item.getFboStock());
+            snapshot.setFbsStock(item.getFbsStock());
+            snapshot.setCbStock(item.getCbStock());
+            snapshot.setRetailStock(item.getRetailStock());
+            snapshot.setSalesDynamics(item.getSalesDynamics());
+            snapshot.setMinSellerPrice(item.getMinSellerPrice());
+            snapshot.setSalesPeriod(normalizePeriod(item.getSalesPeriod()));
+            snapshot.setSalesUpdateAt(parseDateTimeSafe(item.getSalesUpdateAt()));
+            snapshot.setItemPayloadJson(item.getItemPayloadJson());
+            snapshot.setBenchmarkJson(item.getBenchmarkJson());
             snapshot.setAvailabilityStatus(item.getAvailabilityStatus());
             snapshot.setStockHint(item.getStockHint());
             snapshot.setCategoryRank(item.getCategoryRank());
@@ -93,6 +129,75 @@ public class MarketSignalIngestServiceImpl implements MarketSignalIngestService 
         } catch (Exception e) {
             return fallback;
         }
+    }
+
+    private LocalDate parseDateSafe(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        try {
+            return LocalDate.parse(trimmed, DATE_FMT);
+        } catch (DateTimeParseException e) {
+            // continue
+        }
+        if (trimmed.length() >= 10) {
+            try {
+                return LocalDate.parse(trimmed.substring(0, 10), DATE_FMT);
+            } catch (DateTimeParseException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private LocalDateTime parseDateTimeSafe(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        try {
+            return LocalDateTime.parse(trimmed, DateTimeFormatter.ISO_DATE_TIME);
+        } catch (DateTimeParseException e) {
+            // continue
+        }
+        try {
+            return OffsetDateTime.parse(trimmed).toLocalDateTime();
+        } catch (DateTimeParseException e) {
+            // continue
+        }
+        try {
+            return LocalDateTime.parse(trimmed, DATE_TIME_FMT);
+        } catch (DateTimeParseException e) {
+            // continue
+        }
+        if (trimmed.length() >= 10) {
+            LocalDate date = parseDateSafe(trimmed);
+            return date != null ? date.atStartOfDay() : null;
+        }
+        return null;
+    }
+
+    private Integer parseInt(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            try {
+                return new java.math.BigDecimal(value.trim()).intValue();
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+    }
+
+    private String normalizePeriod(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        return value.trim().toLowerCase();
     }
 
     private String normalizePlatform(String value) {

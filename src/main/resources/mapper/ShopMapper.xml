@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.ShopMapper">
+
+    <resultMap id="ShopResultMap" type="com.example.shopeeerp.pojo.Shop">
+        <id property="id" column="id"/>
+        <result property="shopCode" column="shop_code"/>
+        <result property="shopName" column="shop_name"/>
+        <result property="platform" column="platform"/>
+        <result property="market" column="market"/>
+        <result property="ownerUserId" column="owner_user_id"/>
+        <result property="status" column="status"/>
+        <result property="isDefault" column="is_default"/>
+        <result property="sellerId" column="seller_id"/>
+        <result property="shopUrl" column="shop_url"/>
+        <result property="timezone" column="timezone"/>
+        <result property="currency" column="currency"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shop (shop_code, shop_name, platform, market, owner_user_id, status, is_default,
+                          seller_id, shop_url, timezone, currency, description, created_at, updated_at)
+        VALUES (#{shopCode}, #{shopName}, #{platform}, #{market}, #{ownerUserId}, #{status}, #{isDefault},
+                #{sellerId}, #{shopUrl}, #{timezone}, #{currency}, #{description}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE shop SET
+            shop_name = #{shopName},
+            platform = #{platform},
+            market = #{market},
+            owner_user_id = #{ownerUserId},
+            status = #{status},
+            is_default = #{isDefault},
+            seller_id = #{sellerId},
+            shop_url = #{shopUrl},
+            timezone = #{timezone},
+            currency = #{currency},
+            description = #{description},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM shop WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="ShopResultMap">
+        SELECT * FROM shop WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="ShopResultMap">
+        SELECT * FROM shop WHERE shop_code = #{shopCode}
+    </select>
+
+    <select id="selectDefault" resultMap="ShopResultMap">
+        SELECT * FROM shop WHERE is_default = 1 AND status = 'active' LIMIT 1
+    </select>
+
+    <select id="selectByUserId" resultMap="ShopResultMap">
+        SELECT * FROM shop WHERE owner_user_id = #{userId} ORDER BY is_default DESC, created_at ASC
+    </select>
+
+    <select id="selectAll" resultMap="ShopResultMap">
+        SELECT * FROM shop ORDER BY is_default DESC, created_at ASC
+    </select>
+
+    <select id="selectByPlatform" resultMap="ShopResultMap">
+        SELECT * FROM shop WHERE platform = #{platform} AND status = 'active' ORDER BY created_at ASC
+    </select>
+
+    <update id="updateDefault">
+        UPDATE shop SET is_default = #{isDefault}, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

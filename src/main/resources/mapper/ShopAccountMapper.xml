@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.ShopAccountMapper">
+
+    <resultMap id="AccountResultMap" type="com.example.shopeeerp.pojo.ShopAccount">
+        <id property="id" column="id"/>
+        <result property="shopId" column="shop_id"/>
+        <result property="accountType" column="account_type"/>
+        <result property="accountName" column="account_name"/>
+        <result property="username" column="username"/>
+        <result property="passwordEncrypted" column="password_encrypted"/>
+        <result property="twoFactorSecret" column="two_factor_secret"/>
+        <result property="securityQuestion" column="security_question"/>
+        <result property="status" column="status"/>
+        <result property="lastLoginAt" column="last_login_at"/>
+        <result property="loginFailCount" column="login_fail_count"/>
+        <result property="remark" column="remark"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shop_account (shop_id, account_type, account_name, username, password_encrypted,
+                                  two_factor_secret, security_question, status, remark, created_at, updated_at)
+        VALUES (#{shopId}, #{accountType}, #{accountName}, #{username}, #{passwordEncrypted},
+                #{twoFactorSecret}, #{securityQuestion}, #{status}, #{remark}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE shop_account SET
+            account_type = #{accountType},
+            account_name = #{accountName},
+            username = #{username},
+            password_encrypted = #{passwordEncrypted},
+            two_factor_secret = #{twoFactorSecret},
+            security_question = #{securityQuestion},
+            status = #{status},
+            remark = #{remark},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM shop_account WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByShopId">
+        DELETE FROM shop_account WHERE shop_id = #{shopId}
+    </delete>
+
+    <select id="selectById" resultMap="AccountResultMap">
+        SELECT * FROM shop_account WHERE id = #{id}
+    </select>
+
+    <select id="selectByShopId" resultMap="AccountResultMap">
+        SELECT * FROM shop_account WHERE shop_id = #{shopId} ORDER BY account_type, created_at
+    </select>
+
+    <select id="selectByShopIdAndType" resultMap="AccountResultMap">
+        SELECT * FROM shop_account WHERE shop_id = #{shopId} AND account_type = #{accountType}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE shop_account SET status = #{status}, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateLastLogin">
+        UPDATE shop_account SET last_login_at = NOW(), login_fail_count = 0, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="incrementLoginFail">
+        UPDATE shop_account SET login_fail_count = login_fail_count + 1, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="resetLoginFail">
+        UPDATE shop_account SET login_fail_count = 0, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

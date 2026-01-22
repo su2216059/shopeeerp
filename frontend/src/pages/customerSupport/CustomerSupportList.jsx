@@ -18,7 +18,7 @@ const CustomerSupportList = () => {
     setLoading(true)
     try {
       const result = await customerSupportApi.list()
-      setData(result || [])
+      setData(result?.data || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {

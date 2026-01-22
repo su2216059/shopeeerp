@@ -40,4 +40,25 @@ public interface MarketTrendSignalMapper {
     List<MarketTrendSignal> selectHistoryByProduct(@Param("platform") String platform,
                                                    @Param("platformProductId") String platformProductId,
                                                    @Param("limit") int limit);
+
+    /**
+     * 查询热门上升趋势商品（按7天趋势降序）
+     */
+    List<MarketTrendSignal> selectTopTrending(@Param("platform") String platform,
+                                              @Param("signalDate") LocalDate signalDate,
+                                              @Param("limit") int limit);
+
+    /**
+     * 查询排名上升最快的商品
+     */
+    List<MarketTrendSignal> selectTopRankRising(@Param("platform") String platform,
+                                                @Param("signalDate") LocalDate signalDate,
+                                                @Param("limit") int limit);
+
+    /**
+     * 查询评论增长最快的商品
+     */
+    List<MarketTrendSignal> selectTopReviewVelocity(@Param("platform") String platform,
+                                                    @Param("signalDate") LocalDate signalDate,
+                                                    @Param("limit") int limit);
 }

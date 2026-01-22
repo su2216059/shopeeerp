@@ -18,7 +18,7 @@ const UserList = () => {
     setLoading(true)
     try {
       const result = await userApi.list()
-      setData(result || [])
+      setData(result?.data || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {

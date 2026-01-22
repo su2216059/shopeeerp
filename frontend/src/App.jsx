@@ -1,6 +1,10 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import PrivateRoute from './components/PrivateRoute'
 import Layout from './components/Layout'
+import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
 import Dashboard from './pages/Dashboard'
 import CustomerList from './pages/customer/CustomerList'
 import CustomerForm from './pages/customer/CustomerForm'
@@ -27,14 +31,31 @@ import UserList from './pages/user/UserList'
 import UserForm from './pages/user/UserForm'
 import RoleList from './pages/role/RoleList'
 import RoleForm from './pages/role/RoleForm'
+import MarketProductList from './pages/marketSignal/MarketProductList'
+import MarketProductDetail from './pages/marketSignal/MarketProductDetail'
+import MarketTrending from './pages/marketSignal/MarketTrending'
+import MarketCompare from './pages/marketSignal/MarketCompare'
+import ShopList from './pages/shop/ShopList'
+import ShopForm from './pages/shop/ShopForm'
+import ShopCredential from './pages/shop/ShopCredential'
+import ShopAccounts from './pages/shop/ShopAccounts'
 
 function App() {
   return (
-    <Router>
-      <Layout>
+    <AuthProvider>
+      <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* 公开路由 */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* 受保护的路由 */}
+          <Route path="/*" element={
+            <PrivateRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
           
           {/* 客户管理 */}
           <Route path="/customers" element={<CustomerList />} />
@@ -98,9 +119,26 @@ function App() {
           <Route path="/roles" element={<RoleList />} />
           <Route path="/roles/new" element={<RoleForm />} />
           <Route path="/roles/edit/:id" element={<RoleForm />} />
+          
+          {/* 市场信号 */}
+          <Route path="/market/products" element={<MarketProductList />} />
+          <Route path="/market/products/:platform/:productId" element={<MarketProductDetail />} />
+          <Route path="/market/trending" element={<MarketTrending />} />
+          <Route path="/market/compare" element={<MarketCompare />} />
+          
+          {/* 店铺管理 */}
+          <Route path="/shops" element={<ShopList />} />
+          <Route path="/shops/new" element={<ShopForm />} />
+          <Route path="/shops/:id/edit" element={<ShopForm />} />
+          <Route path="/shops/:shopId/credential" element={<ShopCredential />} />
+          <Route path="/shops/:shopId/accounts" element={<ShopAccounts />} />
+                </Routes>
+              </Layout>
+            </PrivateRoute>
+          } />
         </Routes>
-      </Layout>
-    </Router>
+      </Router>
+    </AuthProvider>
   )
 }
 

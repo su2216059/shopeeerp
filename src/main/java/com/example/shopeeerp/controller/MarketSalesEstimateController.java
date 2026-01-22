@@ -128,6 +128,19 @@ public class MarketSalesEstimateController {
     }
 
     /**
+     * 手动触发每月计算
+     * POST /market/estimate/calculate-monthly?platform=ozon&monthEndDate=2026-01-31
+     */
+    @PostMapping("/calculate-monthly")
+    public ResponseEntity<?> calculateMonthly(
+            @RequestParam(defaultValue = "ozon") String platform,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate monthEndDate) {
+
+        MarketSalesEstimateService.BatchResult result = estimateService.calculateMonthly(platform, monthEndDate);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 手动触发趋势信号批量计算
      * POST /market/estimate/calculate-trend?platform=ozon&date=2026-01-19
      */
