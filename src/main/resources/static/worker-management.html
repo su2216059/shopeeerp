@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker管理系统 - Ozon Scraper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .tabs {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            font-size: 15px;
+            font-weight: 500;
+            color: #718096;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tab-button:hover {
+            background: #f7fafc;
+            color: #4a5568;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-top: 5px;
+        }
+
+        .stat-card.primary .value {
+            color: #667eea;
+        }
+
+        .stat-card.success .value {
+            color: #48bb78;
+        }
+
+        .stat-card.warning .value {
+            color: #ed8936;
+        }
+
+        .stat-card.danger .value {
+            color: #f56565;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-card h2 {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f7fafc;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-online {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-offline {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .badge-busy {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .badge-pending {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .badge-in-progress {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .badge-done {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-failed {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .badge-retry {
+            background: #e9d8fd;
+            color: #44337a;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .refresh-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #667eea;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .last-update {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <span>🛒</span>
+                <span>Ozon Scraper - Worker管理系统</span>
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-success" onclick="openAddTaskModal()">➕ 添加任务</button>
+                <button class="btn btn-primary" onclick="refreshData()">
+                    <span id="refresh-icon">🔄</span> 刷新
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <h3>在线Worker</h3>
+                <div class="value" id="stat-online-workers">0</div>
+                <div class="label">活跃中</div>
+            </div>
+            <div class="stat-card warning">
+                <h3>待处理任务</h3>
+                <div class="value" id="stat-pending-tasks">0</div>
+                <div class="label">队列中</div>
+            </div>
+            <div class="stat-card success">
+                <h3>已完成任务</h3>
+                <div class="value" id="stat-completed-tasks">0</div>
+                <div class="label">今日</div>
+            </div>
+            <div class="stat-card danger">
+                <h3>失败任务</h3>
+                <div class="value" id="stat-failed-tasks">0</div>
+                <div class="label">需要重试</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('workers')">👷 Worker监控</button>
+                <button class="tab-button" onclick="switchTab('tasks')">📋 任务管理</button>
+                <button class="tab-button" onclick="switchTab('stats')">📊 统计分析</button>
+            </div>
+
+            <!-- Workers Tab -->
+            <div id="tab-workers" class="tab-content active">
+                <div class="content-card">
+                    <h2>
+                        <span>在线Worker列表</span>
+                        <span class="last-update">最后更新: <span id="workers-last-update">--</span></span>
+                    </h2>
+                    <div id="workers-table-container">
+                        <div class="loading">加载中</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tab-tasks" class="tab-content">
+                <div class="content-card">
+                    <h2>
+                        <span>任务队列</span>
+                        <span class="last-update">最后更新: <span id="tasks-last-update">--</span></span>
+                    </h2>
+                    <div id="tasks-table-container">
+                        <div class="loading">加载中</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div id="tab-stats" class="tab-content">
+                <div class="content-card">
+                    <h2>统计分析</h2>
+                    <div id="stats-container">
+                        <div class="loading">加载中</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="add-task-modal" class="modal">
+        <div class="modal-content">
+            <h2>添加新任务</h2>
+            <form id="add-task-form" onsubmit="submitAddTask(event)">
+                <div class="form-group">
+                    <label for="task-platform">平台</label>
+                    <select id="task-platform" required>
+                        <option value="ozon">Ozon</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-market">市场</label>
+                    <select id="task-market" required>
+                        <option value="RU">俄罗斯 (RU)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-url">URL</label>
+                    <input type="url" id="task-url" placeholder="https://www.ozon.ru/product/..." required>
+                </div>
+                <div class="form-group">
+                    <label for="task-data-type">数据类型</label>
+                    <select id="task-data-type" required>
+                        <option value="product_detail">商品详情页</option>
+                        <option value="category_list">分类列表页</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-priority">优先级</label>
+                    <input type="number" id="task-priority" value="1" min="1" max="10" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-payload">额外配置 (JSON, 可选)</label>
+                    <textarea id="task-payload" placeholder='{"max_products": 50, "max_pages": 3}'></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddTaskModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">添加任务</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let autoRefreshInterval = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+            startAutoRefresh();
+        });
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Load data for the tab
+            if (tabName === 'workers') {
+                loadWorkers();
+            } else if (tabName === 'tasks') {
+                loadTasks();
+            } else if (tabName === 'stats') {
+                loadStats();
+            }
+        }
+
+        // Refresh all data
+        async function refreshData() {
+            const icon = document.getElementById('refresh-icon');
+            icon.innerHTML = '<span class="refresh-indicator"></span>';
+
+            await Promise.all([
+                loadWorkers(),
+                loadTasks(),
+                updateStatistics()
+            ]);
+
+            icon.textContent = '🔄';
+        }
+
+        // Load workers
+        async function loadWorkers() {
+            try {
+                const response = await fetch(`${API_BASE}/market/workers/list`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderWorkersTable(data.workers || []);
+                    document.getElementById('workers-last-update').textContent = new Date().toLocaleTimeString();
+                }
+            } catch (error) {
+                console.error('Failed to load workers:', error);
+                document.getElementById('workers-table-container').innerHTML =
+                    '<div class="empty-state">加载失败，请检查后端服务是否运行</div>';
+            }
+        }
+
+        // Render workers table
+        function renderWorkersTable(workers) {
+            const container = document.getElementById('workers-table-container');
+
+            if (workers.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无在线Worker</div>';
+                return;
+            }
+
+            const html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Worker ID</th>
+                            <th>名称</th>
+                            <th>浏览器</th>
+                            <th>状态</th>
+                            <th>当前任务</th>
+                            <th>统计</th>
+                            <th>最后心跳</th>
+                            <th>IP地址</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${workers.map(worker => `
+                            <tr>
+                                <td><code>${worker.workerId}</code></td>
+                                <td>${worker.workerName || '-'}</td>
+                                <td>${worker.browserType || '-'} ${worker.browserVersion || ''}</td>
+                                <td><span class="badge badge-${worker.status || 'offline'}">${getStatusText(worker.status)}</span></td>
+                                <td>${worker.currentTaskId ? `#${worker.currentTaskId}` : '-'}</td>
+                                <td>
+                                    <small>
+                                        总: ${worker.totalTasks || 0} |
+                                        成功: ${worker.successTasks || 0} |
+                                        失败: ${worker.failedTasks || 0}
+                                    </small>
+                                </td>
+                                <td>${formatTime(worker.lastHeartbeat)}</td>
+                                <td>${worker.lastIp || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Load tasks
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/market/tasks/list?limit=100`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderTasksTable(data.tasks || []);
+                    document.getElementById('tasks-last-update').textContent = new Date().toLocaleTimeString();
+                }
+            } catch (error) {
+                console.error('Failed to load tasks:', error);
+                document.getElementById('tasks-table-container').innerHTML =
+                    '<div class="empty-state">加载失败，请检查后端服务是否运行</div>';
+            }
+        }
+
+        // Render tasks table
+        function renderTasksTable(tasks) {
+            const container = document.getElementById('tasks-table-container');
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无任务</div>';
+                return;
+            }
+
+            const html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>平台</th>
+                            <th>类型</th>
+                            <th>URL</th>
+                            <th>状态</th>
+                            <th>Worker</th>
+                            <th>优先级</th>
+                            <th>重试次数</th>
+                            <th>创建时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tasks.map(task => `
+                            <tr>
+                                <td>#${task.id}</td>
+                                <td>${task.platform}</td>
+                                <td>${task.dataType}</td>
+                                <td><small>${truncateUrl(task.url)}</small></td>
+                                <td><span class="badge badge-${task.status.toLowerCase()}">${getTaskStatusText(task.status)}</span></td>
+                                <td>${task.lockOwner ? `<code>${task.lockOwner}</code>` : '-'}</td>
+                                <td>${task.priority}</td>
+                                <td>${task.retryCount || 0}</td>
+                                <td>${formatTime(task.createdAt)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Load statistics
+        async function loadStats() {
+            const container = document.getElementById('stats-container');
+            container.innerHTML = '<div class="loading">加载中</div>';
+
+            // This would call a statistics API endpoint
+            // For now, show a placeholder
+            setTimeout(() => {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>统计功能开发中...</p>
+                        <p>将显示任务完成趋势、Worker性能分析等</p>
+                    </div>
+                `;
+            }, 500);
+        }
+
+        // Update statistics cards
+        async function updateStatistics() {
+            try {
+                // Load workers
+                const workersResponse = await fetch(`${API_BASE}/market/workers/list`);
+                const workersData = await workersResponse.json();
+
+                if (workersData.success) {
+                    document.getElementById('stat-online-workers').textContent = workersData.count || 0;
+                }
+
+                // Load tasks
+                const tasksResponse = await fetch(`${API_BASE}/market/tasks/list?limit=1000`);
+                const tasksData = await tasksResponse.json();
+
+                if (tasksData.success) {
+                    const tasks = tasksData.tasks || [];
+                    const pending = tasks.filter(t => t.status === 'PENDING').length;
+                    const completed = tasks.filter(t => t.status === 'DONE').length;
+                    const failed = tasks.filter(t => t.status === 'FAILED' || t.status === 'RETRY').length;
+
+                    document.getElementById('stat-pending-tasks').textContent = pending;
+                    document.getElementById('stat-completed-tasks').textContent = completed;
+                    document.getElementById('stat-failed-tasks').textContent = failed;
+                }
+            } catch (error) {
+                console.error('Failed to update statistics:', error);
+            }
+        }
+
+        // Modal functions
+        function openAddTaskModal() {
+            document.getElementById('add-task-modal').classList.add('active');
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById('add-task-modal').classList.remove('active');
+            document.getElementById('add-task-form').reset();
+        }
+
+        // Submit add task
+        async function submitAddTask(event) {
+            event.preventDefault();
+
+            const platform = document.getElementById('task-platform').value;
+            const market = document.getElementById('task-market').value;
+            const url = document.getElementById('task-url').value;
+            const dataType = document.getElementById('task-data-type').value;
+            const priority = parseInt(document.getElementById('task-priority').value);
+            const payloadText = document.getElementById('task-payload').value.trim();
+
+            let payloadJson = null;
+            if (payloadText) {
+                try {
+                    JSON.parse(payloadText); // Validate JSON
+                    payloadJson = payloadText;
+                } catch (e) {
+                    alert('额外配置必须是有效的JSON格式');
+                    return;
+                }
+            }
+
+            const task = {
+                platform,
+                market,
+                url,
+                data_type: dataType,
+                priority,
+                payload_json: payloadJson
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/market/tasks/enqueue`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify([task])
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('任务添加成功！');
+                    closeAddTaskModal();
+                    refreshData();
+                } else {
+                    alert('任务添加失败: ' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('任务添加失败: ' + error.message);
+            }
+        }
+
+        // Auto refresh
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+
+            autoRefreshInterval = setInterval(() => {
+                refreshData();
+            }, 10000); // Refresh every 10 seconds
+        }
+
+        // Utility functions
+        function getStatusText(status) {
+            const statusMap = {
+                'idle': '空闲',
+                'busy': '忙碌',
+                'offline': '离线',
+                'online': '在线'
+            };
+            return statusMap[status] || status || '未知';
+        }
+
+        function getTaskStatusText(status) {
+            const statusMap = {
+                'PENDING': '待处理',
+                'IN_PROGRESS': '处理中',
+                'DONE': '已完成',
+                'FAILED': '失败',
+                'RETRY': '重试中'
+            };
+            return statusMap[status] || status;
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '-';
+            const date = new Date(timestamp);
+            return date.toLocaleString('zh-CN');
+        }
+
+        function truncateUrl(url) {
+            if (!url) return '-';
+            if (url.length <= 50) return url;
+            return url.substring(0, 47) + '...';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('add-task-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'add-task-modal') {
+                closeAddTaskModal();
+            }
+        });
+    </script>
+</body>
+</html>
