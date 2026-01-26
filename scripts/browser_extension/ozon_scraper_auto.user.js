@@ -73,6 +73,79 @@
         GM_setValue('categoryUrls', JSON.stringify(CATEGORY_URLS));
     }
 
+    // ========== Worker模式配置 ==========
+    const WORKER_CONFIG = {
+        enabled: false,              // Worker模式是否启用
+        workerId: null,              // Worker唯一ID
+        workerName: 'Browser Worker', // Worker名称
+        heartbeatInterval: 60000,    // 心跳间隔（毫秒）- 1分钟
+        pullInterval: 5000,          // 拉取任务间隔（毫秒）- 5秒
+        maxTasksPerPull: 1,          // 每次拉取的任务数
+        autoNavigateToTask: true,    // 自动跳转到任务URL
+    };
+
+    // Worker状态
+    let workerState = {
+        registered: false,
+        heartbeatTimer: null,
+        pullTimer: null,
+        currentTaskId: null,
+        isProcessingTask: false,
+    };
+
+    function normalizeHost(hostname) {
+        return String(hostname || '').replace(/^www\./i, '').toLowerCase();
+    }
+
+    function isSameTaskPage(task) {
+        if (!task || !task.url) return false;
+        try {
+            const taskUrl = new URL(task.url, window.location.href);
+            const current = new URL(window.location.href);
+            if (normalizeHost(taskUrl.hostname) != normalizeHost(current.hostname)) {
+                return false;
+            }
+            if (taskUrl.pathname != current.pathname) {
+                return false;
+            }
+            if (String(task.url).includes('/product/')) {
+                return true;
+            }
+            return isSameListingPage(task.url);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function loadPendingTask() {
+        const raw = GM_getValue('pendingWorkerTask', null);
+        if (!raw) return null;
+        try {
+            return JSON.parse(raw);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function savePendingTask(task) {
+        if (!task) return;
+        GM_setValue('pendingWorkerTask', JSON.stringify({
+            task: task,
+            timestamp: Date.now()
+        }));
+    }
+
+    function clearPendingTask() {
+        GM_setValue('pendingWorkerTask', null);
+    }
+
+    function navigateToTask(task) {
+        if (!task || !task.url) return;
+        savePendingTask(task);
+        log(`worker navigating to task url: ${task.url}`);
+        window.location.href = task.url;
+    }
+
     // ========== 状态管理 ==========
     let isRunning = false;
     let isPaused = false;
@@ -81,7 +154,7 @@
     let savedCount = 0;
     let skippedCount = 0;
     let productQueue = [];
-    
+
     // 分类遍历状态
     let currentCategoryIndex = 0;
     let currentPage = 1;
@@ -231,6 +304,457 @@
         return !hasSalesData(product);
     }
 
+    // ========== Worker模式API函数 ==========
+
+    // 生成Worker ID
+    function generateWorkerId() {
+        const stored = GM_getValue('workerId', null);
+        if (stored) return stored;
+
+        const browserId = navigator.userAgent.includes('Chrome') ? 'chrome' :
+                         navigator.userAgent.includes('Firefox') ? 'firefox' : 'browser';
+        const randomId = Math.random().toString(36).substring(2, 8);
+        const workerId = `${browserId}-${randomId}-${Date.now().toString(36)}`;
+
+        GM_setValue('workerId', workerId);
+        return workerId;
+    }
+
+    // Worker注册
+    async function registerWorker() {
+        if (!WORKER_CONFIG.workerId) {
+            WORKER_CONFIG.workerId = generateWorkerId();
+        }
+
+        try {
+            const browserInfo = navigator.userAgent.match(/(Chrome|Firefox|Safari)\/([0-9.]+)/);
+            const browserType = browserInfo ? browserInfo[1] : 'Unknown';
+            const browserVersion = browserInfo ? browserInfo[2] : 'Unknown';
+
+            const response = await sendToBackend('/market/workers/register', {
+                worker_id: WORKER_CONFIG.workerId,
+                worker_name: WORKER_CONFIG.workerName,
+                browser_type: browserType,
+                browser_version: browserVersion,
+                script_version: '2.8'
+            });
+
+            if (response.success) {
+                workerState.registered = true;
+                log(`Worker注册成功: ${WORKER_CONFIG.workerId}`);
+                return true;
+            } else {
+                log(`Worker注册失败: ${response.message || 'Unknown error'}`);
+                return false;
+            }
+        } catch (error) {
+            log(`Worker注册异常: ${error.message}`);
+            return false;
+        }
+    }
+
+    // 发送心跳
+    async function sendHeartbeat() {
+        if (!workerState.registered) return;
+
+        try {
+            await sendToBackend('/market/workers/heartbeat', {
+                worker_id: WORKER_CONFIG.workerId
+            });
+        } catch (error) {
+            log(`心跳发送失败: ${error.message}`);
+        }
+    }
+
+    // 启动心跳定时器
+    function startHeartbeat() {
+        if (workerState.heartbeatTimer) {
+            clearInterval(workerState.heartbeatTimer);
+        }
+
+        workerState.heartbeatTimer = setInterval(() => {
+            sendHeartbeat();
+        }, WORKER_CONFIG.heartbeatInterval);
+
+        // 立即发送一次
+        sendHeartbeat();
+    }
+
+    // 停止心跳
+    function stopHeartbeat() {
+        if (workerState.heartbeatTimer) {
+            clearInterval(workerState.heartbeatTimer);
+            workerState.heartbeatTimer = null;
+        }
+    }
+
+    // 从队列拉取任务
+    async function pullTasks() {
+        if (!workerState.registered || workerState.isProcessingTask) {
+            return [];
+        }
+
+        try {
+            const response = await sendToBackend('/market/tasks/pull', {
+                worker_id: WORKER_CONFIG.workerId,
+                limit: WORKER_CONFIG.maxTasksPerPull
+            });
+
+            if (response.success && response.tasks && response.tasks.length > 0) {
+                log(`拉取到 ${response.tasks.length} 个任务`);
+                return response.tasks;
+            }
+            return [];
+        } catch (error) {
+            log(`拉取任务失败: ${error.message}`);
+            return [];
+        }
+    }
+
+    // 更新任务进度
+    async function updateTaskProgress(taskId, progress) {
+        try {
+            await sendToBackend('/market/tasks/update', {
+                task_id: taskId,
+                worker_id: WORKER_CONFIG.workerId,
+                progress: progress
+            });
+        } catch (error) {
+            log(`更新进度失败: ${error.message}`);
+        }
+    }
+
+    // 完成任务
+    async function completeTask(taskId, status, scrapedCount, savedCount, skippedCount, errorMessage = null) {
+        try {
+            const response = await sendToBackend('/market/tasks/complete', {
+                task_id: taskId,
+                worker_id: WORKER_CONFIG.workerId,
+                status: status,
+                scraped_count: scrapedCount,
+                saved_count: savedCount,
+                skipped_count: skippedCount,
+                error_message: errorMessage
+            });
+
+            if (response.success) {
+                log(`任务完成: ${taskId} (${status})`);
+            }
+        } catch (error) {
+            log(`完成任务失败: ${error.message}`);
+        }
+    }
+
+    // 启动Worker模式
+    async function startWorkerMode() {
+        if (WORKER_CONFIG.enabled) {
+            log('Worker模式已经在运行');
+            return;
+        }
+
+        log('启动Worker模式...');
+        updateStatus('Worker模式启动中...');
+
+        // 注册Worker
+        const registered = await registerWorker();
+        if (!registered) {
+            log('Worker注册失败，无法启动Worker模式');
+            updateStatus('Worker注册失败');
+            return;
+        }
+
+        WORKER_CONFIG.enabled = true;
+        GM_setValue('workerModeEnabled', true);
+
+        // 启动心跳
+        startHeartbeat();
+
+        // 启动任务拉取循环
+        startTaskPulling();
+
+        updateStatus('Worker模式运行中');
+        updateWorkerStatus('在线 - 等待任务');
+        log(`Worker模式已启动 (ID: ${WORKER_CONFIG.workerId})`);
+    }
+
+    // 停止Worker模式
+    function stopWorkerMode() {
+        if (!WORKER_CONFIG.enabled) {
+            return;
+        }
+
+        log('停止Worker模式...');
+
+        WORKER_CONFIG.enabled = false;
+        GM_setValue('workerModeEnabled', false);
+
+        // 停止心跳
+        stopHeartbeat();
+
+        // 停止任务拉取
+        stopTaskPulling();
+
+        workerState.registered = false;
+        workerState.isProcessingTask = false;
+        workerState.currentTaskId = null;
+        clearPendingTask();
+
+        updateStatus('Worker模式已停止');
+        updateWorkerStatus('离线');
+        log('Worker模式已停止');
+    }
+
+    // 启动任务拉取循环
+    function startTaskPulling() {
+        if (workerState.pullTimer) {
+            clearInterval(workerState.pullTimer);
+        }
+
+        workerState.pullTimer = setInterval(async () => {
+            if (!WORKER_CONFIG.enabled || workerState.isProcessingTask) {
+                return;
+            }
+
+            const pending = loadPendingTask();
+            if (pending && pending.task) {
+                if (isSameTaskPage(pending.task)) {
+                    clearPendingTask();
+                    await processTask(pending.task);
+                    return;
+                }
+                if (WORKER_CONFIG.autoNavigateToTask) {
+                    navigateToTask(pending.task);
+                    return;
+                }
+            }
+
+            const tasks = await pullTasks();
+            if (tasks.length > 0) {
+                // ???????
+                await processTask(tasks[0]);
+            }
+        }, WORKER_CONFIG.pullInterval);
+    }
+
+    // 停止任务拉取
+    function stopTaskPulling() {
+        if (workerState.pullTimer) {
+            clearInterval(workerState.pullTimer);
+            workerState.pullTimer = null;
+        }
+    }
+
+    // 处理单个任务
+    async function processTask(task) {
+        workerState.isProcessingTask = true;
+        workerState.currentTaskId = task.id;
+
+        log(`开始处理任务 #${task.id}: ${task.url}`);
+        updateWorkerStatus(`处理任务 #${task.id}`);
+
+        // 重置计数器
+        scrapedCount = 0;
+        savedCount = 0;
+        skippedCount = 0;
+
+        if (WORKER_CONFIG.autoNavigateToTask && task?.url && !isSameTaskPage(task)) {
+            updateWorkerStatus('navigating');
+            navigateToTask(task);
+            workerState.isProcessingTask = false;
+            workerState.currentTaskId = null;
+            return;
+        }
+
+        try {
+            // 根据任务类型处理
+            if (task.data_type === 'product_detail') {
+                // 商品详情页任务
+                await processProductDetailTask(task);
+            } else if (task.data_type === 'category_list') {
+                // 分类列表页任务
+                await processCategoryListTask(task);
+            } else {
+                // 默认：直接访问URL并抓取
+                await processGenericTask(task);
+            }
+
+            // 任务完成
+            await completeTask(task.id, 'DONE', scrapedCount, savedCount, skippedCount);
+            log(`任务 #${task.id} 完成: 抓取${scrapedCount} 保存${savedCount} 跳过${skippedCount}`);
+
+        } catch (error) {
+            log(`任务 #${task.id} 失败: ${error.message}`);
+            await completeTask(task.id, 'FAILED', scrapedCount, savedCount, skippedCount, error.message);
+        } finally {
+            workerState.isProcessingTask = false;
+            workerState.currentTaskId = null;
+            updateWorkerStatus('在线 - 等待任务');
+        }
+    }
+
+    // 处理商品详情页任务
+    async function processProductDetailTask(task) {
+        const html = await fetchProductPage(task.url);
+        const product = parseProductFromHtml(html, task.url);
+
+        if (!product) {
+            throw new Error('无法解析商品数据');
+        }
+
+        scrapedCount++;
+
+        // 更新进度
+        await updateTaskProgress(task.id, {
+            current_page: 1,
+            total_pages: 1,
+            scraped_count: 1,
+            saved_count: 0,
+            skipped_count: 0
+        });
+
+        // 补充销量数据
+        await enrichWithSalesData(product);
+
+        if (shouldSkipProduct(product)) {
+            log(`跳过商品 ${product.platform_product_id} (无销量数据)`);
+            skippedCount++;
+            return;
+        }
+
+        // 保存到后端
+        await sendToBackend('/market/snapshots/ingest', [product]);
+        savedCount++;
+        log(`保存商品: ${product.platform_product_id}`);
+    }
+
+    // 处理分类列表页任务
+    async function processCategoryListTask(task) {
+        let payload = {};
+        try {
+            payload = task.payload_json ? JSON.parse(task.payload_json) : {};
+        } catch (e) {}
+
+        const maxProducts = payload.max_products || 50;
+        const maxPages = payload.max_pages || 3;
+
+        log(`category task: max ${maxProducts} products, ${maxPages} rounds`);
+
+        let links = [];
+        const canUseDom = isSameListingPage(task.url) && (getPageType() === 'category' || getPageType() === 'search');
+        if (canUseDom) {
+            log('worker: use live page scroll to load products');
+            const seen = new Set();
+            let round = 0;
+            while (round < maxPages && seen.size < maxProducts) {
+                await scrollToLoadMore();
+                await sleep(1000);
+                const entries = extractProductLinksFromPage();
+                let added = 0;
+                entries.forEach(entry => {
+                    const link = entry?.url || entry;
+                    if (link && !seen.has(link)) {
+                        seen.add(link);
+                        added += 1;
+                    }
+                });
+                round += 1;
+                if (added === 0) break;
+            }
+            links = Array.from(seen);
+        } else {
+            const html = await fetchProductPage(task.url);
+            links = extractProductLinksFromHtml(html);
+        }
+
+        const limitedLinks = links.slice(0, maxProducts);
+        log(`found ${links.length} products, processing ${limitedLinks.length}`);
+
+        for (let i = 0; i < limitedLinks.length; i++) {
+            const productUrl = limitedLinks[i];
+            try {
+                const productHtml = await fetchProductPage(productUrl);
+                const product = parseProductFromHtml(productHtml, productUrl);
+
+                if (product) {
+                    scrapedCount++;
+
+                    await updateTaskProgress(task.id, {
+                        current_page: 1,
+                        total_pages: 1,
+                        scraped_count: scrapedCount,
+                        saved_count: savedCount,
+                        skipped_count: skippedCount
+                    });
+
+                    await enrichWithSalesData(product);
+
+                    if (shouldSkipProduct(product)) {
+                        skippedCount++;
+                    } else {
+                        await sendToBackend('/market/snapshots/ingest', [product]);
+                        savedCount++;
+                    }
+                }
+            } catch (error) {
+                log(`product failed: ${error.message}`);
+            }
+
+            await sleep(CONFIG.scrapeDelay);
+        }
+    }
+
+    function isSameListingPage(taskUrl) {
+        if (!taskUrl) return false;
+        try {
+            const task = new URL(taskUrl, window.location.href);
+            const current = new URL(window.location.href);
+            if (normalizeHost(task.hostname) !== normalizeHost(current.hostname) || task.pathname !== current.pathname) {
+                return false;
+            }
+            const taskQuery = new URLSearchParams(task.search);
+            const currentQuery = new URLSearchParams(current.search);
+            taskQuery.delete('page');
+            currentQuery.delete('page');
+            return taskQuery.toString() === currentQuery.toString();
+        } catch (error) {
+            return false;
+        }
+    }
+
+async function processGenericTask(task) {
+        // 直接访问URL并尝试抓取
+        const html = await fetchProductPage(task.url);
+
+        // 判断是商品页还是列表页
+        if (task.url.includes('/product/')) {
+            await processProductDetailTask(task);
+        } else {
+            await processCategoryListTask(task);
+        }
+    }
+
+    // 从HTML中提取商品链接
+    function extractProductLinksFromHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const links = [];
+        const productLinks = doc.querySelectorAll('a[href*="/product/"]');
+
+        productLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && href.includes('/product/')) {
+                const fullUrl = href.startsWith('/') ? 'https://www.ozon.ru' + href : href;
+                const cleanUrl = fullUrl.split('?')[0];
+                if (!links.includes(cleanUrl)) {
+                    links.push(cleanUrl);
+                }
+            }
+        });
+
+        return links;
+    }
+
     function applySalesData(product, item, response) {
         if (!product || !item) return product;
 
@@ -294,6 +818,25 @@
         return product;
     }
 
+    function matchSalesItem(items, sku) {
+        if (!Array.isArray(items) || items.length === 0) return null;
+        const normalizedSku = String(sku || '').trim();
+        if (normalizedSku) {
+            const matchBySku = items.find(item => String(item.sku || '').trim() === normalizedSku);
+            if (matchBySku) return matchBySku;
+            const skuDigits = normalizedSku.replace(/\D/g, '');
+            if (skuDigits && skuDigits !== normalizedSku) {
+                const matchByDigits = items.find(item => String(item.sku || '').trim() === skuDigits);
+                if (matchByDigits) return matchByDigits;
+            }
+            const matchByLink = items.find(item =>
+                typeof item.link === 'string' && item.link.includes(`/product/${normalizedSku}`)
+            );
+            if (matchByLink) return matchByLink;
+        }
+        return items[0];
+    }
+
     async function enrichWithSalesData(product) {
         if (!product || !product.platform_product_id) return product;
         const sku = String(product.platform_product_id).trim();
@@ -313,7 +856,15 @@
                 log(`sales api empty items for ${sku}`);
                 return product;
             }
-            const matched = items.find(item => String(item.sku || '') === sku) || items[0];
+            const matched = matchSalesItem(items, sku);
+            if (!matched) {
+                log(`sales api no match for ${sku}`);
+                return product;
+            }
+            const matchedSku = String(matched.sku || '').trim();
+            if (matchedSku && matchedSku !== sku) {
+                log(`sales api mismatch: request ${sku}, matched ${matchedSku}`);
+            }
             applySalesData(product, matched, data);
         } catch (error) {
             log(`sales api failed for ${sku}: ${error.message}`);
@@ -1616,26 +2167,34 @@
         container.innerHTML = `
             <div class="panel">
                 <button class="collapse-btn" id="collapse-btn">−</button>
-                <div class="title">🛒 Ozon Auto Scraper v2.7</div>
-                
+                <div class="title">🛒 Ozon Auto Scraper v2.8</div>
+
                 <div id="panel-content">
+                    <div class="btn-row">
+                        <button class="primary" id="btn-worker-mode">🤖 Worker模式</button>
+                        <button class="danger" id="btn-stop">■ 停止</button>
+                    </div>
+
                     <div class="btn-row">
                         <button class="primary" id="btn-start">▶ 当前页</button>
                         <button class="primary" id="btn-category">📁 遍历分类</button>
                     </div>
-                    
+
                     <div class="btn-row">
                         <button class="secondary" id="btn-edit-category">✏️ 编辑分类</button>
-                        <button class="danger" id="btn-stop">■ 停止</button>
+                        <button class="secondary" id="btn-test">🔗 测试</button>
                     </div>
-                    
+
                     <div class="btn-row">
                         <button class="secondary" id="btn-schedule">⏰ 定时(每${CONFIG.scheduleIntervalHours}h)</button>
-                        <button class="secondary" id="btn-test">🔗 测试</button>
                         <button class="secondary" id="btn-debug">🔍 调试</button>
                     </div>
-                    
+
                     <div class="stats">
+                        <div class="stat-row">
+                            <span>Worker:</span>
+                            <span id="worker-status">离线</span>
+                        </div>
                         <div class="stat-row">
                             <span>状态:</span>
                             <span id="status">就绪</span>
@@ -1664,7 +2223,7 @@
                             <div class="progress-fill" id="progress-fill"></div>
                         </div>
                     </div>
-                    
+
                     <div class="log" id="log"></div>
                 </div>
             </div>
@@ -1673,10 +2232,20 @@
         document.body.appendChild(container);
 
         // 绑定事件
+        document.getElementById('btn-worker-mode').onclick = () => {
+            if (WORKER_CONFIG.enabled) {
+                stopWorkerMode();
+            } else {
+                startWorkerMode();
+            }
+        };
         document.getElementById('btn-start').onclick = startAutoScrape;
         document.getElementById('btn-category').onclick = startCategoryScrape;
         document.getElementById('btn-edit-category').onclick = openCategoryEditor;
-        document.getElementById('btn-stop').onclick = stopScrape;
+        document.getElementById('btn-stop').onclick = () => {
+            stopScrape();
+            stopWorkerMode();
+        };
         document.getElementById('btn-schedule').onclick = () => {
             if (scheduleTimer) {
                 stopSchedule();
@@ -1858,6 +2427,11 @@
         if (el) el.textContent = text;
     }
 
+    function updateWorkerStatus(text) {
+        const el = document.getElementById('worker-status');
+        if (el) el.textContent = text;
+    }
+
     function updateProgress(current, total) {
         const el = document.getElementById('progress-fill');
         if (el) el.style.width = `${(current / total) * 100}%`;
@@ -1898,8 +2472,8 @@
     function init() {
         // 加载保存的分类URL
         loadCategoryUrls();
-        
-        log(`Ozon Auto Scraper v2.7 已加载`);
+
+        log(`Ozon Auto Scraper v2.8 已加载 (Worker模式支持)`);
         log(`分类数: ${CATEGORY_URLS.length} | 定时: 每${CONFIG.scheduleIntervalHours}小时`);
         
         if (document.readyState === 'complete') {
@@ -1915,6 +2489,16 @@
     
     // 检查并恢复之前的状态
     function checkAndResume() {
+        // 检查Worker模式
+        const workerModeEnabled = GM_getValue('workerModeEnabled', false);
+        if (workerModeEnabled) {
+            log('检测到Worker模式已启用，自动恢复...');
+            setTimeout(() => {
+                startWorkerMode();
+            }, 2000);
+            return;
+        }
+
         // 检查是否在分类遍历中
         const savedProgress = GM_getValue('categoryProgress', null);
         if (savedProgress) {
@@ -1926,10 +2510,10 @@
                     totalCategories = CATEGORY_URLS.length;
                     isCategoryMode = true;
                     isRunning = true;
-                    
+
                     log(`恢复分类遍历: ${currentCategoryIndex + 1}/${totalCategories}`);
                     updateCategoryStatus(`${currentCategoryIndex + 1}/${totalCategories}`);
-                    
+
                     // 延迟后继续抓取
                     setTimeout(() => {
                         continueCategroyScrape();
@@ -1940,7 +2524,7 @@
                 console.error('Failed to restore progress', e);
             }
         }
-        
+
         // 检查定时任务
         const scheduleEnabled = GM_getValue('scheduleEnabled', false);
         if (scheduleEnabled) {

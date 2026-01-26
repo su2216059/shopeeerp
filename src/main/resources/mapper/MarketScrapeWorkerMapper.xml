@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.shopeeerp.mapper.MarketScrapeWorkerMapper">
+
+    <!-- 插入Worker -->
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.MarketScrapeWorker"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO market_scrape_worker (
+            worker_id, worker_name, browser_type, browser_version, script_version,
+            status, current_task_id, total_tasks, success_tasks, failed_tasks,
+            last_heartbeat, last_ip, registered_at, updated_at
+        ) VALUES (
+            #{workerId}, #{workerName}, #{browserType}, #{browserVersion}, #{scriptVersion},
+            #{status}, #{currentTaskId}, #{totalTasks}, #{successTasks}, #{failedTasks},
+            #{lastHeartbeat}, #{lastIp}, #{registeredAt}, #{updatedAt}
+        )
+        ON DUPLICATE KEY UPDATE
+            worker_name = VALUES(worker_name),
+            browser_type = VALUES(browser_type),
+            browser_version = VALUES(browser_version),
+            script_version = VALUES(script_version),
+            last_heartbeat = VALUES(last_heartbeat),
+            last_ip = VALUES(last_ip),
+            updated_at = VALUES(updated_at)
+    </insert>
+
+    <!-- 根据workerId查询Worker -->
+    <select id="selectByWorkerId" resultType="com.example.shopeeerp.pojo.MarketScrapeWorker">
+        SELECT * FROM market_scrape_worker
+        WHERE worker_id = #{workerId}
+    </select>
+
+    <!-- 更新Worker心跳时间 -->
+    <update id="updateHeartbeat">
+        UPDATE market_scrape_worker
+        SET last_heartbeat = #{heartbeat},
+            updated_at = #{heartbeat}
+        WHERE worker_id = #{workerId}
+    </update>
+
+    <!-- 查询在线Worker列表 -->
+    <select id="selectOnlineWorkers" resultType="com.example.shopeeerp.pojo.MarketScrapeWorker">
+        SELECT * FROM market_scrape_worker
+        WHERE last_heartbeat >= #{timeout}
+          AND status != 'offline'
+        ORDER BY last_heartbeat DESC
+    </select>
+
+    <!-- 更新Worker状态 -->
+    <update id="updateWorkerStatus">
+        UPDATE market_scrape_worker
+        SET status = #{status},
+            current_task_id = #{taskId},
+            updated_at = #{updatedAt}
+        WHERE worker_id = #{workerId}
+    </update>
+
+    <!-- 标记离线Worker -->
+    <update id="markOfflineWorkers">
+        UPDATE market_scrape_worker
+        SET status = 'offline',
+            current_task_id = NULL,
+            updated_at = #{updatedAt}
+        WHERE last_heartbeat &lt; #{timeout}
+          AND status != 'offline'
+    </update>
+
+    <!-- 更新Worker统计信息 -->
+    <update id="updateWorkerStats">
+        UPDATE market_scrape_worker
+        SET total_tasks = COALESCE(#{totalTasks}, total_tasks),
+            success_tasks = COALESCE(#{successTasks}, success_tasks),
+            failed_tasks = COALESCE(#{failedTasks}, failed_tasks),
+            updated_at = #{updatedAt}
+        WHERE worker_id = #{workerId}
+    </update>
+
+</mapper>

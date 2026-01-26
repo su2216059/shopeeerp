@@ -202,6 +202,72 @@ def http_request(method, url, payload=None, timeout=20):
         raise RuntimeError(f'HTTP {e.code} {e.reason}: {body}')
 
 
+
+def parse_payload_json(raw):
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {}
+
+
+def is_listing_task(data_type, url):
+    if data_type:
+        normalized = str(data_type).lower()
+        if normalized in ('category_page', 'search_page', 'list_page', 'listing_page'):
+            return True
+    return '/category/' in url or '/search/' in url or 'text=' in url
+
+
+def normalize_product_url(url, base_url):
+    if not url:
+        return None
+    cleaned = url.replace('\\/', '/')
+    if cleaned.startswith('//'):
+        cleaned = 'https:' + cleaned
+    absolute = urllib.parse.urljoin(base_url, cleaned)
+    parsed = urllib.parse.urlsplit(absolute)
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, '', ''))
+
+
+def extract_product_links(html, base_url, limit=None):
+    patterns = [
+        r'href="([^"]*?/product/[^"]+)"',
+        r'"link"\s*:\s*"([^"]*?/product/[^"]+)"',
+        r'"url"\s*:\s*"([^"]*?/product/[^"]+)"',
+    ]
+    urls = []
+    seen = set()
+    for pattern in patterns:
+        for match in re.findall(pattern, html, flags=re.IGNORECASE):
+            absolute = normalize_product_url(match, base_url)
+            if not absolute or '/product/' not in absolute:
+                continue
+            if absolute in seen:
+                continue
+            seen.add(absolute)
+            urls.append(absolute)
+            if limit and len(urls) >= limit:
+                return urls
+    return urls
+
+
+def update_query_param(url, key, value):
+    parsed = urllib.parse.urlsplit(url)
+    query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
+    query[key] = str(value)
+    new_query = urllib.parse.urlencode(query)
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
+
+
+def enqueue_tasks(base, tasks, timeout=20, chunk_size=50):
+    if not tasks:
+        return
+    for i in range(0, len(tasks), chunk_size):
+        batch = tasks[i:i + chunk_size]
+        http_request('POST', build_url(base, '/market/tasks/enqueue'), batch, timeout)
+
 def extract_product_id(url, html):
     patterns = [
         r'/product/[^/]*-(\d+)',
@@ -321,6 +387,8 @@ def main():
             task_id = task.get('id')
             url = task.get('url')
             data_type = task.get('dataType') or task.get('data_type')
+            payload_raw = task.get('payloadJson') or task.get('payload_json')
+            params = parse_payload_json(payload_raw)
             try:
                 # 如果有代理池，随机切换代理
                 if proxies:
@@ -337,6 +405,44 @@ def main():
                     html = html[: args.raw_limit]
                 product_id = extract_product_id(url, html) or fallback_id(url)
                 title = extract_title(html)
+
+                if is_listing_task(data_type, url):
+                    max_products = params.get('max_products')
+                    links = extract_product_links(html, url, limit=max_products)
+                    if links:
+                        detail_tasks = []
+                        for link in links:
+                            detail_tasks.append({
+                                'platform': task.get('platform') or 'ozon',
+                                'market': task.get('market') or 'RU',
+                                'url': link,
+                                'data_type': 'detail_page',
+                                'priority': task.get('priority'),
+                                'payload_json': json.dumps({
+                                    'parent_task_id': task_id,
+                                    'source_url': url,
+                                })
+                            })
+                        enqueue_tasks(base, detail_tasks, args.timeout)
+
+                    max_pages = params.get('max_pages')
+                    if isinstance(max_pages, int) and max_pages > 1:
+                        current_page = params.get('current_page')
+                        if not current_page:
+                            current_page = int(urllib.parse.parse_qs(urllib.parse.urlsplit(url).query).get('page', ['1'])[0])
+                        if current_page < max_pages:
+                            next_page = current_page + 1
+                            next_url = update_query_param(url, 'page', next_page)
+                            next_payload = dict(params)
+                            next_payload['current_page'] = next_page
+                            enqueue_tasks(base, [{
+                                'platform': task.get('platform') or 'ozon',
+                                'market': task.get('market') or 'RU',
+                                'url': next_url,
+                                'data_type': data_type or 'category_page',
+                                'priority': task.get('priority'),
+                                'payload_json': json.dumps(next_payload),
+                            }], args.timeout)
 
                 ingest_payload = {
                     'platform': task.get('platform') or 'ozon',

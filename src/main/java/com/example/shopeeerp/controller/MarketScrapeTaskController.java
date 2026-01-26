@@ -7,9 +7,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -78,6 +80,78 @@ public class MarketScrapeTaskController {
             ok = taskService.reportFailure(request.getTaskId(), request.getErrorMessage());
         }
         resp.put("success", ok);
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/update")
+    public ResponseEntity<Map<String, Object>> updateProgress(@RequestBody(required = false) TaskUpdateRequest request) {
+        Map<String, Object> resp = new HashMap<>();
+        if (request == null || request.getTaskId() == null) {
+            resp.put("success", false);
+            resp.put("message", "taskId is required");
+            return ResponseEntity.badRequest().body(resp);
+        }
+        if (request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+            resp.put("success", false);
+            resp.put("message", "workerId is required");
+            return ResponseEntity.badRequest().body(resp);
+        }
+
+        // 将progress对象转换为JSON字符串
+        String progressJson = null;
+        if (request.getProgress() != null) {
+            try {
+                progressJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request.getProgress());
+            } catch (Exception e) {
+                resp.put("success", false);
+                resp.put("message", "Invalid progress data");
+                return ResponseEntity.badRequest().body(resp);
+            }
+        }
+
+        boolean ok = taskService.updateProgress(request.getTaskId(), request.getWorkerId(), progressJson);
+        resp.put("success", ok);
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/complete")
+    public ResponseEntity<Map<String, Object>> complete(@RequestBody(required = false) TaskCompleteRequest request) {
+        Map<String, Object> resp = new HashMap<>();
+        if (request == null || request.getTaskId() == null) {
+            resp.put("success", false);
+            resp.put("message", "taskId is required");
+            return ResponseEntity.badRequest().body(resp);
+        }
+        if (request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+            resp.put("success", false);
+            resp.put("message", "workerId is required");
+            return ResponseEntity.badRequest().body(resp);
+        }
+
+        boolean ok = taskService.completeTask(
+            request.getTaskId(),
+            request.getWorkerId(),
+            request.getStatus(),
+            request.getScrapedCount(),
+            request.getSavedCount(),
+            request.getSkippedCount(),
+            request.getErrorMessage()
+        );
+        resp.put("success", ok);
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/list")
+    public ResponseEntity<Map<String, Object>> list(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String status) {
+        Map<String, Object> resp = new HashMap<>();
+
+        List<MarketScrapeTask> tasks = taskService.listTasks(limit, status);
+        resp.put("success", true);
+        resp.put("count", tasks.size());
+        resp.put("tasks", tasks);
+
         return ResponseEntity.ok(resp);
     }
 
@@ -264,6 +338,126 @@ public class MarketScrapeTaskController {
 
         public void setFetchedAt(String fetchedAt) {
             this.fetchedAt = fetchedAt;
+        }
+    }
+
+    public static class TaskUpdateRequest {
+        @JsonProperty("task_id")
+        @JsonAlias("taskId")
+        private Long taskId;
+
+        @JsonProperty("worker_id")
+        @JsonAlias("workerId")
+        private String workerId;
+
+        private Map<String, Object> progress;
+
+        public Long getTaskId() {
+            return taskId;
+        }
+
+        public void setTaskId(Long taskId) {
+            this.taskId = taskId;
+        }
+
+        public String getWorkerId() {
+            return workerId;
+        }
+
+        public void setWorkerId(String workerId) {
+            this.workerId = workerId;
+        }
+
+        public Map<String, Object> getProgress() {
+            return progress;
+        }
+
+        public void setProgress(Map<String, Object> progress) {
+            this.progress = progress;
+        }
+    }
+
+    public static class TaskCompleteRequest {
+        @JsonProperty("task_id")
+        @JsonAlias("taskId")
+        private Long taskId;
+
+        @JsonProperty("worker_id")
+        @JsonAlias("workerId")
+        private String workerId;
+
+        private String status;
+
+        @JsonProperty("scraped_count")
+        @JsonAlias("scrapedCount")
+        private Integer scrapedCount;
+
+        @JsonProperty("saved_count")
+        @JsonAlias("savedCount")
+        private Integer savedCount;
+
+        @JsonProperty("skipped_count")
+        @JsonAlias("skippedCount")
+        private Integer skippedCount;
+
+        @JsonProperty("error_message")
+        @JsonAlias("errorMessage")
+        private String errorMessage;
+
+        public Long getTaskId() {
+            return taskId;
+        }
+
+        public void setTaskId(Long taskId) {
+            this.taskId = taskId;
+        }
+
+        public String getWorkerId() {
+            return workerId;
+        }
+
+        public void setWorkerId(String workerId) {
+            this.workerId = workerId;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        public Integer getScrapedCount() {
+            return scrapedCount;
+        }
+
+        public void setScrapedCount(Integer scrapedCount) {
+            this.scrapedCount = scrapedCount;
+        }
+
+        public Integer getSavedCount() {
+            return savedCount;
+        }
+
+        public void setSavedCount(Integer savedCount) {
+            this.savedCount = savedCount;
+        }
+
+        public Integer getSkippedCount() {
+            return skippedCount;
+        }
+
+        public void setSkippedCount(Integer skippedCount) {
+            this.skippedCount = skippedCount;
+        }
+
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+
+        public void setErrorMessage(String errorMessage) {
+            this.errorMessage = errorMessage;
         }
     }
 }

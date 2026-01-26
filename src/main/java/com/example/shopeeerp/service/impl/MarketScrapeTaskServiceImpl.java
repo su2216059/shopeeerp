@@ -105,4 +105,52 @@ public class MarketScrapeTaskServiceImpl implements MarketScrapeTaskService {
         }
         return mapper.markFailure(id, errorMessage, LocalDateTime.now()) > 0;
     }
+
+    @Override
+    @Transactional
+    public boolean updateProgress(Long taskId, String workerId, String progressJson) {
+        if (taskId == null || workerId == null || workerId.trim().isEmpty()) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return mapper.updateProgress(taskId, workerId, progressJson, now) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean completeTask(Long taskId, String workerId, String status,
+                               Integer scrapedCount, Integer savedCount,
+                               Integer skippedCount, String errorMessage) {
+        if (taskId == null || workerId == null || workerId.trim().isEmpty()) {
+            return false;
+        }
+
+        // 验证状态
+        if (status == null || status.trim().isEmpty()) {
+            status = "DONE";
+        }
+        if (!status.equals("DONE") && !status.equals("FAILED")) {
+            status = "DONE";
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        return mapper.completeTask(taskId, workerId, status, now, errorMessage, now) > 0;
+    }
+
+    @Override
+    @Transactional
+    public int releaseTimeoutTasks(int timeoutMinutes) {
+        if (timeoutMinutes <= 0) {
+            timeoutMinutes = 30;  // 默认30分钟
+        }
+        LocalDateTime timeout = LocalDateTime.now().minusMinutes(timeoutMinutes);
+        LocalDateTime now = LocalDateTime.now();
+        return mapper.releaseTimeoutTasks(timeout, now);
+    }
+
+    @Override
+    public List<MarketScrapeTask> listTasks(Integer limit, String status) {
+        int size = (limit != null && limit > 0) ? limit : 100;
+        return mapper.selectTasks(status, size);
+    }
 }

@@ -97,4 +97,50 @@
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
+
+    <!-- 更新任务进度 -->
+    <update id="updateProgress">
+        UPDATE market_scrape_task
+        SET payload_json = #{progressJson},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+          AND lock_owner = #{workerId}
+    </update>
+
+    <!-- 完成任务 -->
+    <update id="completeTask">
+        UPDATE market_scrape_task
+        SET status = #{status},
+            fetched_at = #{fetchedAt},
+            last_error = #{errorMessage},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+          AND lock_owner = #{workerId}
+    </update>
+
+    <!-- 释放超时任务 -->
+    <update id="releaseTimeoutTasks">
+        UPDATE market_scrape_task
+        SET status = 'PENDING',
+            lock_owner = NULL,
+            retry_count = COALESCE(retry_count, 0) + 1,
+            updated_at = #{updatedAt}
+        WHERE status = 'IN_PROGRESS'
+          AND lock_at <![CDATA[<]]> #{timeout}
+          AND COALESCE(retry_count, 0) + 1 <![CDATA[<]]> COALESCE(max_retries, 3)
+    </update>
+
+    <!-- 查询任务列表 -->
+    <select id="selectTasks" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM market_scrape_task
+        <where>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

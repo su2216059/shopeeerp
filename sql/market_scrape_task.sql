@@ -36,3 +36,24 @@ CREATE TABLE market_scrape_scheduler (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_worker_id (worker_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='market scrape scheduler';
+
+-- Worker注册和心跳表
+CREATE TABLE IF NOT EXISTS market_scrape_worker (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  worker_id VARCHAR(100) UNIQUE NOT NULL COMMENT 'Worker唯一ID',
+  worker_name VARCHAR(100) COMMENT 'Worker名称',
+  browser_type VARCHAR(50) COMMENT '浏览器类型',
+  browser_version VARCHAR(50) COMMENT '浏览器版本',
+  script_version VARCHAR(20) DEFAULT '2.7' COMMENT '脚本版本',
+  status VARCHAR(20) NOT NULL DEFAULT 'idle' COMMENT 'idle, busy, offline',
+  current_task_id BIGINT COMMENT '当前任务ID',
+  total_tasks INT DEFAULT 0 COMMENT '总任务数',
+  success_tasks INT DEFAULT 0 COMMENT '成功任务数',
+  failed_tasks INT DEFAULT 0 COMMENT '失败任务数',
+  last_heartbeat DATETIME COMMENT '最后心跳时间',
+  last_ip VARCHAR(50) COMMENT '最后IP地址',
+  registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_status (status),
+  INDEX idx_heartbeat (last_heartbeat)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抓取Worker注册表';
