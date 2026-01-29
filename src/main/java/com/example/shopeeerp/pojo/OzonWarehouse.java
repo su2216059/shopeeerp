@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public class OzonWarehouse {
     private Long warehouseId;
+    private Long shopId;
     private String name;
     private String storeName;
     private String status;
@@ -28,6 +29,14 @@ public class OzonWarehouse {
 
     public void setWarehouseId(Long warehouseId) {
         this.warehouseId = warehouseId;
+    }
+
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
     }
 
     public String getName() {

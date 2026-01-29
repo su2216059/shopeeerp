@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS ozon_warehouse;
 
 CREATE TABLE ozon_warehouse (
     warehouse_id BIGINT PRIMARY KEY COMMENT 'warehouse id',
+    shop_id BIGINT NOT NULL COMMENT 'shop id',
     name VARCHAR(255) COMMENT 'warehouse name',
     store_name VARCHAR(100) COMMENT 'store name',
     status VARCHAR(50) COMMENT 'status',
@@ -21,7 +22,8 @@ CREATE TABLE ozon_warehouse (
     first_mile_type_json LONGTEXT COMMENT 'first mile type json',
     created_at DATETIME COMMENT 'created at',
     updated_at DATETIME COMMENT 'updated at',
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_ozon_warehouse_shop_id (shop_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ozon warehouse';
 
 CREATE TABLE ozon_delivery_method (

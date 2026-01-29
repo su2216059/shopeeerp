@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Ozon商品Service实现类
+ * Ozon鍟嗗搧Service瀹炵幇绫?
  */
 @Service
 public class OzonProductServiceImpl implements OzonProductService {
@@ -21,23 +21,23 @@ public class OzonProductServiceImpl implements OzonProductService {
     private OzonProductMapper ozonProductMapper;
 
     @Override
-    public OzonProduct getById(Long id) {
-        return ozonProductMapper.selectById(id);
+    public OzonProduct getById(Long id, Long shopId) {
+        return ozonProductMapper.selectById(id, shopId);
     }
 
     @Override
-    public OzonProduct getByOfferId(String offerId) {
-        return ozonProductMapper.selectByOfferId(offerId);
+    public OzonProduct getByOfferId(String offerId, Long shopId) {
+        return ozonProductMapper.selectByOfferId(offerId, shopId);
     }
 
     @Override
-    public OzonProduct getBySku(Long sku) {
-        return ozonProductMapper.selectBySku(sku);
+    public OzonProduct getBySku(Long sku, Long shopId) {
+        return ozonProductMapper.selectBySku(sku, shopId);
     }
 
     @Override
-    public List<OzonProduct> getAll() {
-        return ozonProductMapper.selectAll();
+    public List<OzonProduct> getAll(Long shopId) {
+        return ozonProductMapper.selectAll(shopId);
     }
 
     @Override
@@ -47,17 +47,17 @@ public class OzonProductServiceImpl implements OzonProductService {
 
     @Override
     public List<OzonProduct> getByFilters(String title,
+                                          Long shopId,
                                           String productCode,
                                           LocalDateTime createdFrom,
                                           LocalDateTime createdTo,
                                           String visibility) {
-        return ozonProductMapper.selectByFilters(title, productCode, createdFrom, createdTo, visibility);
+        return ozonProductMapper.selectByFilters(title, shopId, productCode, createdFrom, createdTo, visibility);
     }
 
     @Override
-    public List<OzonProduct> getByPage(int pageNum, int pageSize) {
-        // 这里可以实现分页逻辑，暂时返回所有数据
-        return getAll();
+    public List<OzonProduct> getByPage(int pageNum, int pageSize, Long shopId) {
+        return getAll(shopId);
     }
 
     @Override
@@ -89,19 +89,19 @@ public class OzonProductServiceImpl implements OzonProductService {
 
     @Override
     @Transactional
-    public boolean removeById(Long id) {
-        return ozonProductMapper.deleteById(id) > 0;
+    public boolean removeById(Long id, Long shopId) {
+        return ozonProductMapper.deleteById(id, shopId) > 0;
     }
 
     @Override
     @Transactional
-    public boolean removeBatch(List<Long> ids) {
-        return ozonProductMapper.deleteBatch(ids) > 0;
+    public boolean removeBatch(List<Long> ids, Long shopId) {
+        return ozonProductMapper.deleteBatch(ids, shopId) > 0;
     }
 
     @Override
-    public long count() {
-        return ozonProductMapper.count();
+    public long count(Long shopId) {
+        return ozonProductMapper.count(shopId);
     }
 
     @Override
@@ -109,3 +109,5 @@ public class OzonProductServiceImpl implements OzonProductService {
         return ozonProductMapper.countByCondition(condition);
     }
 }
+
+

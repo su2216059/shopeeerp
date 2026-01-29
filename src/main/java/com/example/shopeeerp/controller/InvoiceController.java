@@ -2,8 +2,10 @@ package com.example.shopeeerp.controller;
 
 import com.example.shopeeerp.pojo.Invoice;
 import com.example.shopeeerp.service.InvoiceService;
+import com.example.shopeeerp.security.ShopPermission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -21,14 +23,19 @@ public class InvoiceController {
     private InvoiceService invoiceService;
 
     @GetMapping
-    public ResponseEntity<List<Invoice>> getAllInvoices() {
-        List<Invoice> invoices = invoiceService.selectAll();
+    @PreAuthorize("hasAuthority('INVOICE_VIEW')")
+    @ShopPermission
+    public ResponseEntity<List<Invoice>> getAllInvoices(@RequestParam("shopId") Long shopId) {
+        List<Invoice> invoices = invoiceService.selectAll(shopId);
         return ResponseEntity.ok(invoices);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Invoice> getInvoiceById(@PathVariable Long id) {
-        Invoice invoice = invoiceService.selectById(id);
+    @PreAuthorize("hasAuthority('INVOICE_VIEW')")
+    @ShopPermission
+    public ResponseEntity<Invoice> getInvoiceById(@PathVariable Long id,
+                                                  @RequestParam("shopId") Long shopId) {
+        Invoice invoice = invoiceService.selectById(id, shopId);
         if (invoice != null) {
             return ResponseEntity.ok(invoice);
         }
@@ -36,10 +43,14 @@ public class InvoiceController {
     }
 
     @PostMapping
-    public ResponseEntity<Invoice> createInvoice(@RequestBody Invoice invoice) {
+    @PreAuthorize("hasAuthority('INVOICE_CREATE')")
+    @ShopPermission
+    public ResponseEntity<Invoice> createInvoice(@RequestBody Invoice invoice,
+                                                 @RequestParam("shopId") Long shopId) {
         if (invoice.getIssueDate() == null) {
             invoice.setIssueDate(LocalDateTime.now());
         }
+        invoice.setShopId(shopId);
         int result = invoiceService.insert(invoice);
         if (result > 0) {
             return ResponseEntity.ok(invoice);
@@ -48,8 +59,13 @@ public class InvoiceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Invoice> updateInvoice(@PathVariable Long id, @RequestBody Invoice invoice) {
+    @PreAuthorize("hasAuthority('INVOICE_UPDATE')")
+    @ShopPermission
+    public ResponseEntity<Invoice> updateInvoice(@PathVariable Long id,
+                                                 @RequestBody Invoice invoice,
+                                                 @RequestParam("shopId") Long shopId) {
         invoice.setInvoiceId(id);
+        invoice.setShopId(shopId);
         int result = invoiceService.update(invoice);
         if (result > 0) {
             return ResponseEntity.ok(invoice);
@@ -58,8 +74,11 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
-        int result = invoiceService.deleteById(id);
+    @PreAuthorize("hasAuthority('INVOICE_DELETE')")
+    @ShopPermission
+    public ResponseEntity<Void> deleteInvoice(@PathVariable Long id,
+                                              @RequestParam("shopId") Long shopId) {
+        int result = invoiceService.deleteById(id, shopId);
         if (result > 0) {
             return ResponseEntity.ok().build();
         }
@@ -67,8 +86,11 @@ public class InvoiceController {
     }
 
     @GetMapping("/order/{orderId}")
-    public ResponseEntity<List<Invoice>> getInvoicesByOrderId(@PathVariable Long orderId) {
-        List<Invoice> invoices = invoiceService.selectByOrderId(orderId);
+    @PreAuthorize("hasAuthority('INVOICE_VIEW')")
+    @ShopPermission
+    public ResponseEntity<List<Invoice>> getInvoicesByOrderId(@PathVariable Long orderId,
+                                                              @RequestParam("shopId") Long shopId) {
+        List<Invoice> invoices = invoiceService.selectByOrderId(orderId, shopId);
         return ResponseEntity.ok(invoices);
     }
 }

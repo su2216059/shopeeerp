@@ -23,8 +23,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public int deleteById(Long orderId) {
-        return orderMapper.deleteById(orderId);
+    public int deleteById(Long orderId, Long shopId) {
+        return orderMapper.deleteById(orderId, shopId);
     }
 
     @Override
@@ -33,17 +33,17 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Order selectById(Long orderId) {
-        return orderMapper.selectById(orderId);
+    public Order selectById(Long orderId, Long shopId) {
+        return orderMapper.selectById(orderId, shopId);
     }
 
     @Override
-    public List<Order> selectAll() {
-        return orderMapper.selectAll();
+    public List<Order> selectAll(Long shopId) {
+        return orderMapper.selectAll(shopId);
     }
 
     @Override
-    public List<Order> selectByCustomerId(Long customerId) {
-        return orderMapper.selectByCustomerId(customerId);
+    public List<Order> selectByCustomerId(Long customerId, Long shopId) {
+        return orderMapper.selectByCustomerId(customerId, shopId);
     }
 }

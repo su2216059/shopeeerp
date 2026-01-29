@@ -23,12 +23,14 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `customer_support`;
 CREATE TABLE `customer_support`  (
   `support_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `shop_id` bigint(0) NOT NULL,
   `customer_id` bigint(0) NOT NULL,
   `issue_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `created_at` timestamp(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
   `updated_at` timestamp(0) NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0),
   PRIMARY KEY (`support_id`) USING BTREE,
+  INDEX `idx_customer_support_shop_id`(`shop_id`) USING BTREE,
   INDEX `customer_id`(`customer_id`) USING BTREE,
   CONSTRAINT `customer_support_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;

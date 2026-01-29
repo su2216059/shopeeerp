@@ -61,7 +61,11 @@
     </select>
 
     <select id="selectByUserId" resultMap="ShopResultMap">
-        SELECT * FROM shop WHERE owner_user_id = #{userId} ORDER BY is_default DESC, created_at ASC
+        SELECT s.*
+        FROM shop s
+        INNER JOIN user_shop us ON us.shop_id = s.id
+        WHERE us.user_id = #{userId}
+        ORDER BY s.is_default DESC, s.created_at ASC
     </select>
 
     <select id="selectAll" resultMap="ShopResultMap">

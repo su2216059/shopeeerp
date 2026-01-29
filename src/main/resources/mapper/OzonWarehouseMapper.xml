@@ -4,6 +4,7 @@
 
     <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonWarehouse">
         <id column="warehouse_id" property="warehouseId" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
         <result column="name" property="name" jdbcType="VARCHAR"/>
         <result column="store_name" property="storeName" jdbcType="VARCHAR"/>
         <result column="status" property="status" jdbcType="VARCHAR"/>
@@ -24,28 +25,33 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        warehouse_id, name, store_name, status, working_days, min_working_days,
+        warehouse_id, shop_id, name, store_name, status, working_days, min_working_days,
         postings_limit, min_postings_limit, is_rfbs, has_entrusted_acceptance,
         can_print_act_in_advance, has_postings_limit, is_karantin, is_kgt,
         is_timetable_editable, first_mile_type_json, created_at, updated_at
     </sql>
 
-    <select id="selectByWarehouseId" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/> FROM ozon_warehouse WHERE warehouse_id = #{warehouseId}
+    <select id="selectByWarehouseId" parameterType="map" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM ozon_warehouse
+        WHERE warehouse_id = #{warehouseId} AND shop_id = #{shopId}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/> FROM ozon_warehouse ORDER BY warehouse_id
+        SELECT <include refid="Base_Column_List"/>
+        FROM ozon_warehouse
+        WHERE shop_id = #{shopId}
+        ORDER BY warehouse_id
     </select>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonWarehouse">
         INSERT INTO ozon_warehouse (
-            warehouse_id, name, store_name, status, working_days, min_working_days,
+            warehouse_id, shop_id, name, store_name, status, working_days, min_working_days,
             postings_limit, min_postings_limit, is_rfbs, has_entrusted_acceptance,
             can_print_act_in_advance, has_postings_limit, is_karantin, is_kgt,
             is_timetable_editable, first_mile_type_json, created_at, updated_at
         ) VALUES (
-            #{warehouseId}, #{name}, #{storeName}, #{status}, #{workingDays}, #{minWorkingDays},
+            #{warehouseId}, #{shopId}, #{name}, #{storeName}, #{status}, #{workingDays}, #{minWorkingDays},
             #{postingsLimit}, #{minPostingsLimit}, #{isRfbs}, #{hasEntrustedAcceptance},
             #{canPrintActInAdvance}, #{hasPostingsLimit}, #{isKarantin}, #{isKgt},
             #{isTimetableEditable}, #{firstMileTypeJson}, #{createdAt}, #{updatedAt}
@@ -70,10 +76,10 @@
             is_timetable_editable = #{isTimetableEditable},
             first_mile_type_json = #{firstMileTypeJson},
             updated_at = #{updatedAt}
-        WHERE warehouse_id = #{warehouseId}
+        WHERE warehouse_id = #{warehouseId} AND shop_id = #{shopId}
     </update>
 
-    <delete id="deleteByWarehouseId">
-        DELETE FROM ozon_warehouse WHERE warehouse_id = #{warehouseId}
+    <delete id="deleteByWarehouseId" parameterType="map">
+        DELETE FROM ozon_warehouse WHERE warehouse_id = #{warehouseId} AND shop_id = #{shopId}
     </delete>
 </mapper>

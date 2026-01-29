@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Table, message, Image, Button, Space, Select, Input, DatePicker, Tabs } from 'antd'
 import { ozonProductApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const renderValue = (value, suffix = '') => {
   if (value === null || value === undefined || value === '') {
@@ -29,6 +30,8 @@ const ProductList = () => {
   const [searchTitle, setSearchTitle] = useState('')
   const [searchProductCode, setSearchProductCode] = useState('')
   const [searchRange, setSearchRange] = useState([])
+  const { hasPermission } = useAuth()
+  const canSync = hasPermission('OZON_PRODUCT_SYNC')
 
   useEffect(() => {
     fetchData(buildQueryParams({ visibility: listVisibility }))
@@ -263,7 +266,7 @@ const ProductList = () => {
               { value: 'EMPTY_STOCK', label: '库存不足' },
             ]}
           />
-          <Button type="primary" loading={syncing} onClick={handleSync}>
+          <Button type="primary" loading={syncing} onClick={handleSync} disabled={!canSync}>
             同步商品
           </Button>
         </Space>

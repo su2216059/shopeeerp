@@ -4,11 +4,16 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { invoiceApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const InvoiceList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('INVOICE_CREATE')
+  const canUpdate = hasPermission('INVOICE_UPDATE')
+  const canDelete = hasPermission('INVOICE_DELETE')
 
   useEffect(() => {
     fetchData()
@@ -74,6 +79,7 @@ const InvoiceList = () => {
           <Button
             type="link"
             icon={<EditOutlined />}
+            disabled={!canUpdate}
             onClick={() => navigate(`/invoices/edit/${record.invoiceId}`)}
           >
             编辑
@@ -82,7 +88,7 @@ const InvoiceList = () => {
             title="确定要删除吗？"
             onConfirm={() => handleDelete(record.invoiceId)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canDelete}>
               删除
             </Button>
           </Popconfirm>
@@ -98,6 +104,7 @@ const InvoiceList = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
+          disabled={!canCreate}
           onClick={() => navigate('/invoices/new')}
         >
           新增发票

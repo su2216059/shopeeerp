@@ -3,6 +3,7 @@ package com.example.shopeeerp.service.impl;
 import com.example.shopeeerp.mapper.MarketScrapeTaskMapper;
 import com.example.shopeeerp.pojo.MarketScrapeTask;
 import com.example.shopeeerp.service.MarketScrapeTaskService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,9 @@ public class MarketScrapeTaskServiceImpl implements MarketScrapeTaskService {
 
     @Autowired
     private MarketScrapeTaskMapper mapper;
+
+    @Value("${market.scrape.retry-delay-minutes:5}")
+    private int retryDelayMinutes;
 
     @Override
     @Transactional
@@ -103,7 +107,8 @@ public class MarketScrapeTaskServiceImpl implements MarketScrapeTaskService {
         if (id == null) {
             return false;
         }
-        return mapper.markFailure(id, errorMessage, LocalDateTime.now()) > 0;
+        int delayMinutes = retryDelayMinutes > 0 ? retryDelayMinutes : 5;
+        return mapper.markFailure(id, errorMessage, LocalDateTime.now(), delayMinutes) > 0;
     }
 
     @Override
@@ -141,12 +146,15 @@ public class MarketScrapeTaskServiceImpl implements MarketScrapeTaskService {
     @Transactional
     public int releaseTimeoutTasks(int timeoutMinutes) {
         if (timeoutMinutes <= 0) {
-            timeoutMinutes = 30;  // 默认30分钟
+            timeoutMinutes = 30;  // ??30??
         }
         LocalDateTime timeout = LocalDateTime.now().minusMinutes(timeoutMinutes);
         LocalDateTime now = LocalDateTime.now();
-        return mapper.releaseTimeoutTasks(timeout, now);
+        int released = mapper.releaseTimeoutTasks(timeout, now);
+        int failed = mapper.markTimeoutFailed(timeout, now);
+        return released + failed;
     }
+
 
     @Override
     public List<MarketScrapeTask> listTasks(Integer limit, String status) {

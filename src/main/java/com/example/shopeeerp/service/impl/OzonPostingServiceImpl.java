@@ -23,8 +23,24 @@ public class OzonPostingServiceImpl implements OzonPostingService {
     }
 
     @Override
+    public List<OzonPosting> getAllByShopId(Long shopId) {
+        if (shopId == null) {
+            return ozonPostingMapper.selectAll();
+        }
+        return ozonPostingMapper.selectByShopId(shopId);
+    }
+
+    @Override
     public OzonPosting getByPostingNumber(String postingNumber) {
         return ozonPostingMapper.selectByPostingNumber(postingNumber);
+    }
+
+    @Override
+    public OzonPosting getByPostingNumberAndShopId(String postingNumber, Long shopId) {
+        if (shopId == null) {
+            return ozonPostingMapper.selectByPostingNumber(postingNumber);
+        }
+        return ozonPostingMapper.selectByPostingNumberAndShopId(postingNumber, shopId);
     }
 
     @Override
@@ -61,6 +77,23 @@ public class OzonPostingServiceImpl implements OzonPostingService {
         }
         BigDecimal normalized = purchaseAmount != null ? purchaseAmount : BigDecimal.ZERO;
         return ozonPostingMapper.updatePurchaseAmount(postingNumber, normalized, LocalDateTime.now()) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean updatePurchaseAmount(String postingNumber, Long shopId, BigDecimal purchaseAmount) {
+        if (postingNumber == null || postingNumber.trim().isEmpty()) {
+            return false;
+        }
+        BigDecimal normalized = purchaseAmount != null ? purchaseAmount : BigDecimal.ZERO;
+        if (shopId == null) {
+            return ozonPostingMapper.updatePurchaseAmount(postingNumber, normalized, LocalDateTime.now()) > 0;
+        }
+        return ozonPostingMapper.updatePurchaseAmountByShopId(
+                postingNumber,
+                shopId,
+                normalized,
+                LocalDateTime.now()) > 0;
     }
 
     @Override

@@ -5,6 +5,7 @@
     <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.OzonProduct">
         <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
         <result column="offer_id" property="offerId" jdbcType="VARCHAR"/>
         <result column="name" property="name" jdbcType="VARCHAR"/>
         <result column="sku" property="sku" jdbcType="BIGINT"/>
@@ -30,28 +31,31 @@
 
     <!-- 根据ID查询 -->
     <select id="selectById" resultMap="BaseResultMap">
-        SELECT * FROM ozon_product WHERE id = #{id}
+        SELECT * FROM ozon_product WHERE id = #{id} AND shop_id = #{shopId}
     </select>
 
     <!-- 根据offerId查询 -->
     <select id="selectByOfferId" resultMap="BaseResultMap">
-        SELECT * FROM ozon_product WHERE offer_id = #{offerId}
+        SELECT * FROM ozon_product WHERE offer_id = #{offerId} AND shop_id = #{shopId}
     </select>
 
     <!-- 根据SKU查询 -->
     <select id="selectBySku" resultMap="BaseResultMap">
-        SELECT * FROM ozon_product WHERE sku = #{sku}
+        SELECT * FROM ozon_product WHERE sku = #{sku} AND shop_id = #{shopId}
     </select>
 
     <!-- 查询所有 -->
     <select id="selectAll" resultMap="BaseResultMap">
-        SELECT * FROM ozon_product ORDER BY id
+        SELECT * FROM ozon_product WHERE shop_id = #{shopId} ORDER BY id
     </select>
 
     <!-- 根据条件查询 -->
     <select id="selectByCondition" resultMap="BaseResultMap">
         SELECT * FROM ozon_product
         <where>
+            <if test="shopId != null">
+                AND shop_id = #{shopId}
+            </if>
             <if test="id != null">
                 AND id = #{id}
             </if>
@@ -85,6 +89,9 @@
             GROUP BY product_id
         ) st ON st.product_id = p.id
         <where>
+            <if test="shopId != null">
+                AND p.shop_id = #{shopId}
+            </if>
             <if test="title != null and title != ''">
                 AND LOWER(p.name) LIKE CONCAT('%', #{title}, '%')
             </if>
@@ -126,12 +133,12 @@
     <!-- 插入 -->
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonProduct">
         INSERT INTO ozon_product (
-            id, offer_id, name, sku, description_category_id, type_id,
+            id, shop_id, offer_id, name, sku, description_category_id, type_id,
             currency_code, price, old_price, min_price, vat, volume_weight,
             discounted_fbo_stocks, is_archived, is_autoarchived, is_discounted,
             is_kgt, is_prepayment_allowed, is_super, created_at, updated_at, sync_time
         ) VALUES (
-            #{id}, #{offerId}, #{name}, #{sku}, #{descriptionCategoryId}, #{typeId},
+            #{id}, #{shopId}, #{offerId}, #{name}, #{sku}, #{descriptionCategoryId}, #{typeId},
             #{currencyCode}, #{price}, #{oldPrice}, #{minPrice}, #{vat}, #{volumeWeight},
             #{discountedFboStocks}, #{isArchived}, #{isAutoarchived}, #{isDiscounted},
             #{isKgt}, #{isPrepaymentAllowed}, #{isSuper}, #{createdAt}, #{updatedAt}, #{syncTime}
@@ -141,14 +148,14 @@
     <!-- 批量插入 -->
     <insert id="insertBatch" parameterType="java.util.List">
         INSERT INTO ozon_product (
-            id, offer_id, name, sku, description_category_id, type_id,
+            id, shop_id, offer_id, name, sku, description_category_id, type_id,
             currency_code, price, old_price, min_price, vat, volume_weight,
             discounted_fbo_stocks, is_archived, is_autoarchived, is_discounted,
             is_kgt, is_prepayment_allowed, is_super, created_at, updated_at, sync_time
         ) VALUES
         <foreach collection="list" item="item" separator=",">
             (
-                #{item.id}, #{item.offerId}, #{item.name}, #{item.sku}, #{item.descriptionCategoryId}, #{item.typeId},
+                #{item.id}, #{item.shopId}, #{item.offerId}, #{item.name}, #{item.sku}, #{item.descriptionCategoryId}, #{item.typeId},
                 #{item.currencyCode}, #{item.price}, #{item.oldPrice}, #{item.minPrice}, #{item.vat}, #{item.volumeWeight},
                 #{item.discountedFboStocks}, #{item.isArchived}, #{item.isAutoarchived}, #{item.isDiscounted},
                 #{item.isKgt}, #{item.isPrepaymentAllowed}, #{item.isSuper}, #{item.createdAt}, #{item.updatedAt}, #{item.syncTime}
@@ -179,17 +186,17 @@
             is_super = #{isSuper},
             updated_at = #{updatedAt},
             sync_time = #{syncTime}
-        WHERE id = #{id}
+        WHERE id = #{id} AND shop_id = #{shopId}
     </update>
 
     <!-- 根据ID删除 -->
-    <delete id="deleteById">
-        DELETE FROM ozon_product WHERE id = #{id}
+    <delete id="deleteById" parameterType="map">
+        DELETE FROM ozon_product WHERE id = #{id} AND shop_id = #{shopId}
     </delete>
 
     <!-- 批量删除 -->
-    <delete id="deleteBatch">
-        DELETE FROM ozon_product WHERE id IN
+    <delete id="deleteBatch" parameterType="map">
+        DELETE FROM ozon_product WHERE shop_id = #{shopId} AND id IN
         <foreach item="id" collection="ids" open="(" separator="," close=")">
             #{id}
         </foreach>
@@ -197,13 +204,16 @@
 
     <!-- 统计数量 -->
     <select id="count" resultType="long">
-        SELECT COUNT(*) FROM ozon_product
+        SELECT COUNT(*) FROM ozon_product WHERE shop_id = #{shopId}
     </select>
 
     <!-- 根据条件统计数量 -->
     <select id="countByCondition" parameterType="com.example.shopeeerp.pojo.OzonProduct" resultType="long">
         SELECT COUNT(*) FROM ozon_product
         <where>
+            <if test="shopId != null">
+                AND shop_id = #{shopId}
+            </if>
             <if test="id != null">
                 AND id = #{id}
             </if>

@@ -4,6 +4,7 @@
 
     <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Invoice">
         <id column="invoice_id" property="invoiceId" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
         <result column="order_id" property="orderId" jdbcType="BIGINT"/>
         <result column="invoice_number" property="invoiceNumber" jdbcType="VARCHAR"/>
         <result column="issue_date" property="issueDate" jdbcType="TIMESTAMP"/>
@@ -11,16 +12,16 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        invoice_id, order_id, invoice_number, issue_date, total_amount
+        invoice_id, shop_id, order_id, invoice_number, issue_date, total_amount
     </sql>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.Invoice" useGeneratedKeys="true" keyProperty="invoiceId">
-        INSERT INTO invoices (order_id, invoice_number, issue_date, total_amount)
-        VALUES (#{orderId}, #{invoiceNumber}, #{issueDate}, #{totalAmount})
+        INSERT INTO invoices (shop_id, order_id, invoice_number, issue_date, total_amount)
+        VALUES (#{shopId}, #{orderId}, #{invoiceNumber}, #{issueDate}, #{totalAmount})
     </insert>
 
-    <delete id="deleteById" parameterType="java.lang.Long">
-        DELETE FROM invoices WHERE invoice_id = #{invoiceId}
+    <delete id="deleteById" parameterType="map">
+        DELETE FROM invoices WHERE invoice_id = #{invoiceId} AND shop_id = #{shopId}
     </delete>
 
     <update id="update" parameterType="com.example.shopeeerp.pojo.Invoice">
@@ -29,24 +30,25 @@
             invoice_number = #{invoiceNumber},
             issue_date = #{issueDate},
             total_amount = #{totalAmount}
-        WHERE invoice_id = #{invoiceId}
+        WHERE invoice_id = #{invoiceId} AND shop_id = #{shopId}
     </update>
 
-    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectById" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM invoices
-        WHERE invoice_id = #{invoiceId}
+        WHERE invoice_id = #{invoiceId} AND shop_id = #{shopId}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM invoices
+        WHERE shop_id = #{shopId}
     </select>
 
-    <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectByOrderId" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM invoices
-        WHERE order_id = #{orderId}
+        WHERE order_id = #{orderId} AND shop_id = #{shopId}
     </select>
 
 </mapper>

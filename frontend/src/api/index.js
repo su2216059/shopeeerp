@@ -1,138 +1,151 @@
-import request from '../utils/request'
+﻿import request from '../utils/request'
 
-// 认证相关API
+const resolveShopId = () => {
+  const stored = localStorage.getItem('currentShopId')
+  if (!stored) {
+    return null
+  }
+  const parsed = Number(stored)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+const withShopId = (params = {}) => {
+  const shopId = resolveShopId()
+  return { ...params, shopId }
+}
+
+// 璁よ瘉鐩稿叧API
 export const authApi = {
-  login: (data) => request.post('/api/auth/login', data),
-  register: (data) => request.post('/api/auth/register', data),
-  logout: () => request.post('/api/auth/logout'),
-  getCurrentUser: () => request.get('/api/auth/me'),
-  changePassword: (data) => request.post('/api/auth/change-password', data),
+  login: (data) => request.post('/auth/login', data),
+  register: (data) => request.post('/auth/register', data),
+  logout: () => request.post('/auth/logout'),
+  getCurrentUser: () => request.get('/auth/me'),
+  changePassword: (data) => request.post('/auth/change-password', data),
 }
 
-// 客户相关API
+// 瀹㈡埛鐩稿叧API
 export const customerApi = {
-  list: () => request.get('/customers'),
-  getById: (id) => request.get(`/customers/${id}`),
-  create: (data) => request.post('/customers', data),
-  update: (id, data) => request.put(`/customers/${id}`, data),
-  delete: (id) => request.delete(`/customers/${id}`),
-  getByEmail: (email) => request.get(`/customers/email/${email}`),
+  list: () => request.get('/customers', { params: withShopId() }),
+  getById: (id) => request.get(`/customers/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/customers', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/customers/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/customers/${id}`, { params: withShopId() }),
+  getByEmail: (email) => request.get(`/customers/email/${email}`, { params: withShopId() }),
 }
 
-// 客户支持相关API
+// 瀹㈡埛鏀寔鐩稿叧API
 export const customerSupportApi = {
-  list: () => request.get('/customer-support'),
-  getById: (id) => request.get(`/customer-support/${id}`),
-  create: (data) => request.post('/customer-support', data),
-  update: (id, data) => request.put(`/customer-support/${id}`, data),
-  delete: (id) => request.delete(`/customer-support/${id}`),
-  getByCustomerId: (customerId) => request.get(`/customer-support/customer/${customerId}`),
+  list: () => request.get('/customer-support', { params: withShopId() }),
+  getById: (id) => request.get(`/customer-support/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/customer-support', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/customer-support/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/customer-support/${id}`, { params: withShopId() }),
+  getByCustomerId: (customerId) =>
+    request.get(`/customer-support/customer/${customerId}`, { params: withShopId() }),
 }
 
-// 产品相关API
+// 浜у搧鐩稿叧API
 export const productApi = {
-  list: () => request.get('/products'),
-  getById: (id) => request.get(`/products/${id}`),
-  create: (data) => request.post('/products', data),
-  update: (id, data) => request.put(`/products/${id}`, data),
-  delete: (id) => request.delete(`/products/${id}`),
-  getBySku: (sku) => request.get(`/products/sku/${sku}`),
-  getByCategoryId: (categoryId) => request.get(`/products/category/${categoryId}`),
+  list: () => request.get('/products', { params: withShopId() }),
+  getById: (id) => request.get(`/products/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/products', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/products/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/products/${id}`, { params: withShopId() }),
+  getBySku: (sku) => request.get(`/products/sku/${sku}`, { params: withShopId() }),
+  getByCategoryId: (categoryId) =>
+    request.get(`/products/category/${categoryId}`, { params: withShopId() }),
 }
 
-// Ozon 商品同步数据
+// Ozon 鍟嗗搧鍚屾鏁版嵁
 export const ozonProductApi = {
-  list: (params) => request.get('/ozon/products', { params }),
-  sync: (params) => request.get('/ozon/products/sync', { params }),
+  list: (params) => request.get('/ozon/products', { params: withShopId(params) }),
+  sync: (params) => request.get('/ozon/products/sync', { params: withShopId(params) }),
 }
 
-// Ozon 订单同步数据
+// Ozon 璁㈠崟鍚屾鏁版嵁
 export const ozonOrderApi = {
-  list: (params) => request.get('/ozon/orders', { params }),
-  sync: (params) => request.get('/ozon/orders/sync', { params }),
+  list: (params) => request.get('/ozon/orders', { params: withShopId(params) }),
+  sync: (params) => request.get('/ozon/orders/sync', { params: withShopId(params) }),
   updatePurchaseAmount: (postingNumber, purchaseAmount) =>
-    request.put(`/ozon/orders/${encodeURIComponent(postingNumber)}/purchase-amount`, { purchaseAmount }),
+    request.put(
+      `/ozon/orders/${encodeURIComponent(postingNumber)}/purchase-amount`,
+      { purchaseAmount },
+      { params: withShopId() }
+    ),
 }
 
-// Ozon 财务（利润）同步
+// Ozon 璐㈠姟锛堝埄娑︼級鍚屾
 export const ozonProfitApi = {
-  sync: (params) => request.post('/ozon/profit/sync', null, { params }),
+  sync: (params) => request.post('/ozon/profit/sync', null, { params: withShopId(params) }),
 }
 
-// 订单相关API
+// 璁㈠崟鐩稿叧API
 export const orderApi = {
-  list: () => request.get('/orders'),
-  getById: (id) => request.get(`/orders/${id}`),
-  create: (data) => request.post('/orders', data),
-  update: (id, data) => request.put(`/orders/${id}`, data),
-  delete: (id) => request.delete(`/orders/${id}`),
-  getByCustomerId: (customerId) => request.get(`/orders/customer/${customerId}`),
+  list: () => request.get('/orders', { params: withShopId() }),
+  getById: (id) => request.get(`/orders/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/orders', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/orders/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/orders/${id}`, { params: withShopId() }),
+  getByCustomerId: (customerId) =>
+    request.get(`/orders/customer/${customerId}`, { params: withShopId() }),
 }
 
-// 订单项相关API
+// 璁㈠崟椤圭浉鍏矨PI
 export const orderItemApi = {
-  list: () => request.get('/order-items'),
-  getById: (id) => request.get(`/order-items/${id}`),
-  create: (data) => request.post('/order-items', data),
-  update: (id, data) => request.put(`/order-items/${id}`, data),
-  delete: (id) => request.delete(`/order-items/${id}`),
-  getByOrderId: (orderId) => request.get(`/order-items/order/${orderId}`),
-  getByProductId: (productId) => request.get(`/order-items/product/${productId}`),
+  list: () => request.get('/order-items', { params: withShopId() }),
+  getById: (id) => request.get(`/order-items/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/order-items', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/order-items/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/order-items/${id}`, { params: withShopId() }),
+  getByOrderId: (orderId) => request.get(`/order-items/order/${orderId}`, { params: withShopId() }),
+  getByProductId: (productId) =>
+    request.get(`/order-items/product/${productId}`, { params: withShopId() }),
 }
 
-// 支付相关API
-export const paymentApi = {
-  list: () => request.get('/payments'),
-  getById: (id) => request.get(`/payments/${id}`),
-  create: (data) => request.post('/payments', data),
-  update: (id, data) => request.put(`/payments/${id}`, data),
-  delete: (id) => request.delete(`/payments/${id}`),
-  getByOrderId: (orderId) => request.get(`/payments/order/${orderId}`),
-}
-
-// 发票相关API
+// 鍙戠エ鐩稿叧API
 export const invoiceApi = {
-  list: () => request.get('/invoices'),
-  getById: (id) => request.get(`/invoices/${id}`),
-  create: (data) => request.post('/invoices', data),
-  update: (id, data) => request.put(`/invoices/${id}`, data),
-  delete: (id) => request.delete(`/invoices/${id}`),
-  getByOrderId: (orderId) => request.get(`/invoices/order/${orderId}`),
+  list: () => request.get('/invoices', { params: withShopId() }),
+  getById: (id) => request.get(`/invoices/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/invoices', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/invoices/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/invoices/${id}`, { params: withShopId() }),
+  getByOrderId: (orderId) => request.get(`/invoices/order/${orderId}`, { params: withShopId() }),
 }
 
-// 库存相关API
+// 搴撳瓨鐩稿叧API
 export const inventoryApi = {
-  list: () => request.get('/inventory'),
-  getById: (id) => request.get(`/inventory/${id}`),
-  create: (data) => request.post('/inventory', data),
-  update: (id, data) => request.put(`/inventory/${id}`, data),
-  delete: (id) => request.delete(`/inventory/${id}`),
-  getByProductId: (productId) => request.get(`/inventory/product/${productId}`),
-  getByWarehouseId: (warehouseId) => request.get(`/inventory/warehouse/${warehouseId}`),
+  list: () => request.get('/inventory', { params: withShopId() }),
+  getById: (id) => request.get(`/inventory/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/inventory', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/inventory/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/inventory/${id}`, { params: withShopId() }),
+  getByProductId: (productId) => request.get(`/inventory/product/${productId}`, { params: withShopId() }),
+  getByWarehouseId: (warehouseId) =>
+    request.get(`/inventory/warehouse/${warehouseId}`, { params: withShopId() }),
 }
 
-// 仓库相关API
+// 浠撳簱鐩稿叧API
 export const warehouseApi = {
-  list: () => request.get('/ozon/warehouses'),
-  sync: () => request.post('/ozon/warehouses/sync'),
-  getById: (id) => request.get(`/warehouses/${id}`),
-  create: (data) => request.post('/warehouses', data),
-  update: (id, data) => request.put(`/warehouses/${id}`, data),
-  delete: (id) => request.delete(`/warehouses/${id}`),
+  list: () => request.get('/ozon/warehouses', { params: withShopId() }),
+  sync: () => request.post('/ozon/warehouses/sync', null, { params: withShopId() }),
+  getById: (id) => request.get(`/warehouses/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/warehouses', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/warehouses/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/warehouses/${id}`, { params: withShopId() }),
 }
 
-// 销售数据相关API
+// 閿€鍞暟鎹浉鍏矨PI
 export const salesDataApi = {
-  list: () => request.get('/sales-data'),
-  getById: (id) => request.get(`/sales-data/${id}`),
-  create: (data) => request.post('/sales-data', data),
-  update: (id, data) => request.put(`/sales-data/${id}`, data),
-  delete: (id) => request.delete(`/sales-data/${id}`),
-  getByProductId: (productId) => request.get(`/sales-data/product/${productId}`),
-  getByOrderId: (orderId) => request.get(`/sales-data/order/${orderId}`),
+  list: () => request.get('/sales-data', { params: withShopId() }),
+  getById: (id) => request.get(`/sales-data/${id}`, { params: withShopId() }),
+  create: (data) => request.post('/sales-data', data, { params: withShopId() }),
+  update: (id, data) => request.put(`/sales-data/${id}`, data, { params: withShopId() }),
+  delete: (id) => request.delete(`/sales-data/${id}`, { params: withShopId() }),
+  getByProductId: (productId) => request.get(`/sales-data/product/${productId}`, { params: withShopId() }),
+  getByOrderId: (orderId) => request.get(`/sales-data/order/${orderId}`, { params: withShopId() }),
 }
 
-// 用户相关API
+// 鐢ㄦ埛鐩稿叧API
 export const userApi = {
   list: () => request.get('/users'),
   getById: (id) => request.get(`/users/${id}`),
@@ -143,21 +156,29 @@ export const userApi = {
   getByRoleId: (roleId) => request.get(`/users/role/${roleId}`),
 }
 
-// 角色相关API
+// 瑙掕壊鐩稿叧API
 export const roleApi = {
   list: () => request.get('/roles'),
   getById: (id) => request.get(`/roles/${id}`),
   create: (data) => request.post('/roles', data),
   update: (id, data) => request.put(`/roles/${id}`, data),
   delete: (id) => request.delete(`/roles/${id}`),
+  getPermissions: (id) => request.get(`/roles/${id}/permissions`),
+  updatePermissions: (id, permissionIds) =>
+    request.put(`/roles/${id}/permissions`, { permissionIds }),
 }
 
-// 市场信号相关API
+// Permission APIs
+export const permissionApi = {
+  list: () => request.get('/permissions'),
+}
+
+// 甯傚満淇″彿鐩稿叧API
 export const marketSignalApi = {
-  // 商品快照
+  // 鍟嗗搧蹇収
   ingestSnapshots: (data) => request.post('/market/snapshots/ingest', data),
   
-  // 销量估算
+  // 閿€閲忎及绠?
   getEstimate: (platform, productId, periodType = 'weekly') => 
     request.get(`/market/estimate/${platform}/${productId}`, { params: { periodType } }),
   getEstimateHistory: (platform, productId, periodType = 'weekly', limit = 10) => 
@@ -165,7 +186,7 @@ export const marketSignalApi = {
   getTrendSignal: (platform, productId) => 
     request.get(`/market/estimate/${platform}/${productId}/trend`),
   
-  // 批量计算
+  // 鎵归噺璁＄畻
   calculateDaily: (platform, date) =>
     request.post('/market/estimate/calculate-daily', null, { params: { platform, date } }),
   calculateWeekly: (platform, weekEndDate) =>
@@ -176,7 +197,7 @@ export const marketSignalApi = {
     request.post('/market/estimate/calculate-trend', null, { params: { platform, date } }),
 }
 
-// 市场商品相关API
+// 甯傚満鍟嗗搧鐩稿叧API
 export const marketProductApi = {
   list: (params) => request.get('/market/products', { params }),
   getById: (platform, productId) => request.get(`/market/products/${platform}/${productId}`),
@@ -187,30 +208,32 @@ export const marketProductApi = {
   ozonSalesProxy: (data) => request.post('/market/products/ozon-sales-proxy', data),
 }
 
-// 店铺管理API
+// 搴楅摵绠＄悊API
 export const shopApi = {
-  // 店铺CRUD
-  list: () => request.get('/api/shops'),
-  getById: (id) => request.get(`/api/shops/${id}`),
-  create: (data) => request.post('/api/shops', data),
-  update: (id, data) => request.put(`/api/shops/${id}`, data),
-  delete: (id) => request.delete(`/api/shops/${id}`),
-  getDefault: () => request.get('/api/shops/default'),
-  getByPlatform: (platform) => request.get(`/api/shops/platform/${platform}`),
+  // 搴楅摵CRUD
+  list: () => request.get('/shops'),
+  getById: (id) => request.get(`/shops/${id}`),
+  create: (data) => request.post('/shops', data),
+  update: (id, data) => request.put(`/shops/${id}`, data),
+  delete: (id) => request.delete(`/shops/${id}`),
+  getDefault: () => request.get('/shops/default'),
+  getByPlatform: (platform) => request.get(`/shops/platform/${platform}`),
+  bind: (data) => request.post('/shops/bind', data),
   
-  // 凭证管理
-  getCredential: (shopId) => request.get(`/api/shops/${shopId}/credential`),
-  saveCredential: (shopId, data) => request.post(`/api/shops/${shopId}/credential`, data),
-  verifyCredential: (shopId) => request.post(`/api/shops/${shopId}/credential/verify`),
+  // 鍑瘉绠＄悊
+  getCredential: (shopId) => request.get(`/shops/${shopId}/credential`),
+  saveCredential: (shopId, data) => request.post(`/shops/${shopId}/credential`, data),
+  verifyCredential: (shopId) => request.post(`/shops/${shopId}/credential/verify`),
   
-  // 账号管理
-  getAccounts: (shopId) => request.get(`/api/shops/${shopId}/accounts`),
-  addAccount: (shopId, data) => request.post(`/api/shops/${shopId}/accounts`, data),
-  updateAccount: (shopId, accountId, data) => request.put(`/api/shops/${shopId}/accounts/${accountId}`, data),
-  deleteAccount: (shopId, accountId) => request.delete(`/api/shops/${shopId}/accounts/${accountId}`),
-  getAccountDetail: (shopId, accountId) => request.get(`/api/shops/${shopId}/accounts/${accountId}/detail`),
+  // 璐﹀彿绠＄悊
+  getAccounts: (shopId) => request.get(`/shops/${shopId}/accounts`),
+  addAccount: (shopId, data) => request.post(`/shops/${shopId}/accounts`, data),
+  updateAccount: (shopId, accountId, data) => request.put(`/shops/${shopId}/accounts/${accountId}`, data),
+  deleteAccount: (shopId, accountId) => request.delete(`/shops/${shopId}/accounts/${accountId}`),
+  getAccountDetail: (shopId, accountId) => request.get(`/shops/${shopId}/accounts/${accountId}/detail`),
   
-  // 店铺切换
-  switchShop: (shopId) => request.post(`/api/shops/${shopId}/switch`),
-  getCurrentShop: () => request.get('/api/shops/current'),
+  // 搴楅摵鍒囨崲
+  switchShop: (shopId) => request.post(`/shops/${shopId}/switch`),
+  getCurrentShop: () => request.get('/shops/current'),
 }
+

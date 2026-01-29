@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
  */
 public class Order {
     private Long orderId;
+    private Long shopId;
     private Long customerId;
     private String orderStatus;
     private BigDecimal totalAmount;
@@ -25,6 +26,14 @@ public class Order {
 
     public void setOrderId(Long orderId) {
         this.orderId = orderId;
+    }
+
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
     }
 
     public Long getCustomerId() {

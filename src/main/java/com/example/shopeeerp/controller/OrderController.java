@@ -2,8 +2,10 @@ package com.example.shopeeerp.controller;
 
 import com.example.shopeeerp.pojo.Order;
 import com.example.shopeeerp.service.OrderService;
+import com.example.shopeeerp.security.ShopPermission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -21,14 +23,19 @@ public class OrderController {
     private OrderService orderService;
 
     @GetMapping
-    public ResponseEntity<List<Order>> getAllOrders() {
-        List<Order> orders = orderService.selectAll();
+    @PreAuthorize("hasAuthority('ORDER_VIEW')")
+    @ShopPermission
+    public ResponseEntity<List<Order>> getAllOrders(@RequestParam("shopId") Long shopId) {
+        List<Order> orders = orderService.selectAll(shopId);
         return ResponseEntity.ok(orders);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
-        Order order = orderService.selectById(id);
+    @PreAuthorize("hasAuthority('ORDER_VIEW')")
+    @ShopPermission
+    public ResponseEntity<Order> getOrderById(@PathVariable Long id,
+                                              @RequestParam("shopId") Long shopId) {
+        Order order = orderService.selectById(id, shopId);
         if (order != null) {
             return ResponseEntity.ok(order);
         }
@@ -36,8 +43,12 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
+    @PreAuthorize("hasAuthority('ORDER_CREATE')")
+    @ShopPermission
+    public ResponseEntity<Order> createOrder(@RequestBody Order order,
+                                             @RequestParam("shopId") Long shopId) {
         LocalDateTime now = LocalDateTime.now();
+        order.setShopId(shopId);
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         int result = orderService.insert(order);
@@ -48,8 +59,13 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order order) {
+    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
+    @ShopPermission
+    public ResponseEntity<Order> updateOrder(@PathVariable Long id,
+                                             @RequestBody Order order,
+                                             @RequestParam("shopId") Long shopId) {
         order.setOrderId(id);
+        order.setShopId(shopId);
         order.setUpdatedAt(LocalDateTime.now());
         int result = orderService.update(order);
         if (result > 0) {
@@ -59,8 +75,11 @@ public class OrderController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        int result = orderService.deleteById(id);
+    @PreAuthorize("hasAuthority('ORDER_DELETE')")
+    @ShopPermission
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id,
+                                            @RequestParam("shopId") Long shopId) {
+        int result = orderService.deleteById(id, shopId);
         if (result > 0) {
             return ResponseEntity.ok().build();
         }
@@ -68,8 +87,11 @@ public class OrderController {
     }
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<Order>> getOrdersByCustomerId(@PathVariable Long customerId) {
-        List<Order> orders = orderService.selectByCustomerId(customerId);
+    @PreAuthorize("hasAuthority('ORDER_VIEW')")
+    @ShopPermission
+    public ResponseEntity<List<Order>> getOrdersByCustomerId(@PathVariable Long customerId,
+                                                             @RequestParam("shopId") Long shopId) {
+        List<Order> orders = orderService.selectByCustomerId(customerId, shopId);
         return ResponseEntity.ok(orders);
     }
 }

@@ -16,16 +16,19 @@ public class OzonWarehouseServiceImpl implements OzonWarehouseService {
     private OzonWarehouseMapper mapper;
 
     @Override
-    public OzonWarehouse getByWarehouseId(Long warehouseId) {
-        if (warehouseId == null) {
+    public OzonWarehouse getByWarehouseId(Long warehouseId, Long shopId) {
+        if (warehouseId == null || shopId == null) {
             return null;
         }
-        return mapper.selectByWarehouseId(warehouseId);
+        return mapper.selectByWarehouseId(warehouseId, shopId);
     }
 
     @Override
-    public List<OzonWarehouse> getAll() {
-        List<OzonWarehouse> list = mapper.selectAll();
+    public List<OzonWarehouse> getAll(Long shopId) {
+        if (shopId == null) {
+            return Collections.emptyList();
+        }
+        List<OzonWarehouse> list = mapper.selectAll(shopId);
         return list != null ? list : Collections.emptyList();
     }
 
@@ -61,10 +64,10 @@ public class OzonWarehouseServiceImpl implements OzonWarehouseService {
     }
 
     @Override
-    public boolean removeByWarehouseId(Long warehouseId) {
-        if (warehouseId == null) {
+    public boolean removeByWarehouseId(Long warehouseId, Long shopId) {
+        if (warehouseId == null || shopId == null) {
             return false;
         }
-        return mapper.deleteByWarehouseId(warehouseId) > 0;
+        return mapper.deleteByWarehouseId(warehouseId, shopId) > 0;
     }
 }

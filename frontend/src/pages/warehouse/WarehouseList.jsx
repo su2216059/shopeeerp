@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Table, Button, message } from 'antd'
 import { warehouseApi } from '../../api'
+import { useAuth } from '../../context/AuthContext'
 
 const WarehouseList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const { hasPermission } = useAuth()
+  const canSync = hasPermission('OZON_WAREHOUSE_SYNC')
 
   useEffect(() => {
     fetchData()
@@ -121,7 +124,7 @@ const WarehouseList = () => {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>{'\u4ed3\u5e93\u7ba1\u7406'}</h1>
-        <Button type="primary" onClick={handleSync} loading={syncing}>
+        <Button type="primary" onClick={handleSync} loading={syncing} disabled={!canSync}>
           {'\u540c\u6b65\u4ed3\u5e93'}
         </Button>
       </div>

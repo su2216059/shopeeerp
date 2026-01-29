@@ -12,7 +12,12 @@ public interface OzonPostingMapper {
 
     List<OzonPosting> selectAll();
 
+    List<OzonPosting> selectByShopId(@Param("shopId") Long shopId);
+
     OzonPosting selectByPostingNumber(@Param("postingNumber") String postingNumber);
+
+    OzonPosting selectByPostingNumberAndShopId(@Param("postingNumber") String postingNumber,
+                                               @Param("shopId") Long shopId);
 
     int insert(OzonPosting posting);
 
@@ -23,6 +28,11 @@ public interface OzonPostingMapper {
     int updatePurchaseAmount(@Param("postingNumber") String postingNumber,
                              @Param("purchaseAmount") BigDecimal purchaseAmount,
                              @Param("updatedAt") java.time.LocalDateTime updatedAt);
+
+    int updatePurchaseAmountByShopId(@Param("postingNumber") String postingNumber,
+                                     @Param("shopId") Long shopId,
+                                     @Param("purchaseAmount") BigDecimal purchaseAmount,
+                                     @Param("updatedAt") java.time.LocalDateTime updatedAt);
 
     int deleteByPostingNumber(@Param("postingNumber") String postingNumber);
 

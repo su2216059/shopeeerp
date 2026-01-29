@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.UserShopMapper">
+
+    <resultMap id="UserShopResultMap" type="com.example.shopeeerp.pojo.UserShop">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
+        <result column="role" property="role" jdbcType="VARCHAR"/>
+        <result column="permissions" property="permissions" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.UserShop" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_shop (user_id, shop_id, role, permissions, created_at)
+        VALUES (#{userId}, #{shopId}, #{role}, #{permissions}, NOW())
+    </insert>
+
+    <delete id="deleteByUserIdAndShopId">
+        DELETE FROM user_shop WHERE user_id = #{userId} AND shop_id = #{shopId}
+    </delete>
+
+    <select id="countByUserIdAndShopId" resultType="int">
+        SELECT COUNT(1) FROM user_shop WHERE user_id = #{userId} AND shop_id = #{shopId}
+    </select>
+
+    <select id="selectShopIdsByUserId" resultType="java.lang.Long">
+        SELECT shop_id FROM user_shop WHERE user_id = #{userId} ORDER BY shop_id ASC
+    </select>
+
+    <select id="selectByUserId" resultMap="UserShopResultMap">
+        SELECT id, user_id, shop_id, role, permissions, created_at
+        FROM user_shop
+        WHERE user_id = #{userId}
+        ORDER BY shop_id ASC
+    </select>
+
+</mapper>

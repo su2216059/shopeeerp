@@ -16,22 +16,22 @@ public interface OzonProductMapper {
     /**
      * 根据ID查询商品
      */
-    OzonProduct selectById(@Param("id") Long id);
+    OzonProduct selectById(@Param("id") Long id, @Param("shopId") Long shopId);
 
     /**
      * 根据offerId查询商品
      */
-    OzonProduct selectByOfferId(@Param("offerId") String offerId);
+    OzonProduct selectByOfferId(@Param("offerId") String offerId, @Param("shopId") Long shopId);
 
     /**
      * 根据SKU查询商品
      */
-    OzonProduct selectBySku(@Param("sku") Long sku);
+    OzonProduct selectBySku(@Param("sku") Long sku, @Param("shopId") Long shopId);
 
     /**
      * 查询所有商品
      */
-    List<OzonProduct> selectAll();
+    List<OzonProduct> selectAll(@Param("shopId") Long shopId);
 
     /**
      * 根据条件查询商品列表
@@ -42,6 +42,7 @@ public interface OzonProductMapper {
      * 根据筛选条件查询商品列表
      */
     List<OzonProduct> selectByFilters(@Param("title") String title,
+                                      @Param("shopId") Long shopId,
                                       @Param("productCode") String productCode,
                                       @Param("createdFrom") LocalDateTime createdFrom,
                                       @Param("createdTo") LocalDateTime createdTo,
@@ -65,17 +66,17 @@ public interface OzonProductMapper {
     /**
      * 根据ID删除商品
      */
-    int deleteById(@Param("id") Long id);
+    int deleteById(@Param("id") Long id, @Param("shopId") Long shopId);
 
     /**
      * 批量删除商品
      */
-    int deleteBatch(@Param("ids") List<Long> ids);
+    int deleteBatch(@Param("ids") List<Long> ids, @Param("shopId") Long shopId);
 
     /**
      * 统计商品数量
      */
-    long count();
+    long count(@Param("shopId") Long shopId);
 
     /**
      * 根据条件统计商品数量

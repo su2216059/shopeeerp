@@ -11,10 +11,13 @@ import com.example.shopeeerp.pojo.OzonPosting;
 import com.example.shopeeerp.pojo.OzonPostingItem;
 import com.example.shopeeerp.pojo.OzonProductStatus;
 import com.example.shopeeerp.pojo.OzonProductStock;
+import com.example.shopeeerp.mapper.ShopCredentialMapper;
+import com.example.shopeeerp.pojo.ShopCredential;
 import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
 import com.example.shopeeerp.service.OzonProductStatusService;
 import com.example.shopeeerp.service.OzonProductStockService;
+import com.example.shopeeerp.util.CryptoUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
@@ -65,6 +68,12 @@ public class OzonAdapter implements PlatformAdapter {
     private final OzonProductStatusService ozonProductStatusService;
     private final OzonProductStockService ozonProductStockService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired(required = false)
+    private ShopCredentialMapper credentialMapper;
+
+    @Autowired(required = false)
+    private CryptoUtil cryptoUtil;
 
     @Value("${ozon.api.client-id:}")
     private String clientId;
@@ -159,6 +168,10 @@ public class OzonAdapter implements PlatformAdapter {
      * 新增：获取 posting 数据并转换为数据库实体（postings + items）
      */
     public OzonPostingSyncResult fetchPostings(String startDate, String endDate) {
+        return fetchPostings(startDate, endDate, null);
+    }
+
+    public OzonPostingSyncResult fetchPostings(String startDate, String endDate, Long shopId) {
         List<OzonPosting> postings = new ArrayList<>();
         List<OzonPostingItem> items = new ArrayList<>();
 
@@ -168,10 +181,10 @@ public class OzonAdapter implements PlatformAdapter {
 
         String since = startDate != null ? startDate : formatUtc(OffsetDateTime.now(ZoneOffset.UTC).minusDays(7));
         String to = endDate != null ? endDate : formatUtc(OffsetDateTime.now(ZoneOffset.UTC));
+        HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
         do {
             OzonPostingListRequest request = buildPostingListRequest(since, to, limit, offset);
-            HttpHeaders headers = buildAuthHeaders();
             HttpEntity<OzonPostingListRequest> entity = new HttpEntity<>(request, headers);
 
             try {
@@ -190,7 +203,7 @@ public class OzonAdapter implements PlatformAdapter {
                             if (p == null) {
                                 continue;
                             }
-                            OzonPosting postingEntity = convertPostingToEntity(p);
+                            OzonPosting postingEntity = convertPostingToEntity(p, shopId);
                             postings.add(postingEntity);
                             items.addAll(convertPostingItems(p));
                         }
@@ -239,18 +252,71 @@ public class OzonAdapter implements PlatformAdapter {
     }
 
     private HttpHeaders buildAuthHeaders() {
+        return buildAuthHeaders(clientId, apiKey);
+    }
+
+    private HttpHeaders buildAuthHeadersForShop(Long shopId) {
+        if (shopId == null) {
+            return buildAuthHeaders();
+        }
+        ShopCredential credential = resolveCredential(shopId);
+        return buildAuthHeaders(credential.getClientId(), credential.getApiKey());
+    }
+
+    private HttpHeaders buildAuthHeaders(String resolvedClientId, String resolvedApiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Client-Id", clientId);
-        headers.set("Api-Key", apiKey);
+        headers.set("Client-Id", resolvedClientId);
+        headers.set("Api-Key", resolvedApiKey);
         return headers;
     }
 
-    private OzonPosting convertPostingToEntity(OzonPostingListResponse.Posting posting) {
+    private ShopCredential resolveCredential(Long shopId) {
+        if (shopId == null) {
+            return null;
+        }
+        if (credentialMapper == null) {
+            throw new IllegalStateException("ShopCredentialMapper not available for shop credential lookup");
+        }
+        ShopCredential credential = credentialMapper.selectByShopId(shopId);
+        if (credential == null) {
+            throw new IllegalStateException("Missing shop credential for shopId: " + shopId);
+        }
+        if (cryptoUtil == null) {
+            throw new IllegalStateException("CryptoUtil not available for shop credential decryption");
+        }
+        try {
+            if (credential.getApiKeyEncrypted() != null) {
+                credential.setApiKey(cryptoUtil.decrypt(credential.getApiKeyEncrypted()));
+            }
+            if (credential.getApiSecretEncrypted() != null) {
+                credential.setApiSecret(cryptoUtil.decrypt(credential.getApiSecretEncrypted()));
+            }
+            if (credential.getAccessTokenEncrypted() != null) {
+                credential.setAccessToken(cryptoUtil.decrypt(credential.getAccessTokenEncrypted()));
+            }
+            if (credential.getRefreshTokenEncrypted() != null) {
+                credential.setRefreshToken(cryptoUtil.decrypt(credential.getRefreshTokenEncrypted()));
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to decrypt credential for shopId: " + shopId, e);
+        }
+        if (Strings.isBlank(credential.getClientId()) || Strings.isBlank(credential.getApiKey())) {
+            throw new IllegalStateException("Missing clientId or apiKey for shopId: " + shopId);
+        }
+        try {
+            credentialMapper.updateLastUsed(shopId);
+        } catch (Exception e) {
+            log.warn("Failed to mark credential used for shop {}", shopId, e);
+        }
+        return credential;
+    }
+
+    private OzonPosting convertPostingToEntity(OzonPostingListResponse.Posting posting, Long shopId) {
         OzonPosting entity = new OzonPosting();
         entity.setPostingNumber(posting.getPostingNumber());
         // 绑定店铺ID，避免外键约束失败
-        entity.setShopId(defaultShopId);
+        entity.setShopId(shopId != null ? shopId : defaultShopId);
         entity.setOrderId(posting.getOrderId());
         entity.setOrderNumber(posting.getOrderNumber());
         entity.setStatus(posting.getStatus());
@@ -413,12 +479,17 @@ public class OzonAdapter implements PlatformAdapter {
      * 拉取财务现金流报表（按日期区间，分页汇总）
      */
     public List<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> fetchCashflows(String start, String end, boolean withDetails, int pageSize) {
+        return fetchCashflows(start, end, withDetails, pageSize, null);
+    }
+
+    public List<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> fetchCashflows(String start, String end, boolean withDetails, int pageSize, Long shopId) {
         List<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowResponse> responses = new ArrayList<>();
         int page = 1;
         int totalPages = 1;
         String from = start != null ? start : formatUtc(OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         String to = end != null ? end : formatUtc(OffsetDateTime.now(ZoneOffset.UTC));
         int maxAttempts = Math.max(cashflowMaxRetries, 0) + 1;
+        HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
         do {
             com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest req = new com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest();
@@ -430,7 +501,6 @@ public class OzonAdapter implements PlatformAdapter {
             req.setPage(page);
             req.setPageSize(pageSize);
 
-            HttpHeaders headers = buildAuthHeaders();
             HttpEntity<com.example.shopeeerp.adapter.dto.ozon.OzonCashflowRequest> entity = new HttpEntity<>(req, headers);
 
             boolean pageFetched = false;
@@ -484,10 +554,20 @@ public class OzonAdapter implements PlatformAdapter {
      * 按 posting_number 拉取财务交易列表（利润/费用）
      */
     public List<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.Operation> fetchTransactions(String postingNumber, String from, String to, int pageSize) {
+        return fetchTransactions(postingNumber, from, to, pageSize, null);
+    }
+
+    public List<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.Operation> fetchTransactions(
+            String postingNumber,
+            String from,
+            String to,
+            int pageSize,
+            Long shopId) {
         List<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse.Operation> operations = new ArrayList<>();
         int page = 1;
         int totalPages = 1;
         int size = pageSize > 0 ? pageSize : 100;
+        HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
         do {
             com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest req = new com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest();
@@ -503,7 +583,6 @@ public class OzonAdapter implements PlatformAdapter {
             req.setPage(page);
             req.setPageSize(size);
 
-            HttpHeaders headers = buildAuthHeaders();
             HttpEntity<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListRequest> entity = new HttpEntity<>(req, headers);
 
             ResponseEntity<com.example.shopeeerp.adapter.dto.ozon.OzonTransactionListResponse> resp = restTemplate.exchange(
@@ -528,16 +607,20 @@ public class OzonAdapter implements PlatformAdapter {
     }
 
     public List<OzonWarehouseListResponse.Warehouse> fetchWarehouses(int limit) {
+        return fetchWarehouses(limit, null);
+    }
+
+    public List<OzonWarehouseListResponse.Warehouse> fetchWarehouses(int limit, Long shopId) {
         List<OzonWarehouseListResponse.Warehouse> warehouses = new ArrayList<>();
         int offset = 0;
         int pageSize = limit > 0 ? limit : 100;
+        HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
         while (true) {
             OzonWarehouseListRequest request = new OzonWarehouseListRequest();
             request.setLimit(pageSize);
             request.setOffset(offset);
 
-            HttpHeaders headers = buildAuthHeaders();
             HttpEntity<OzonWarehouseListRequest> entity = new HttpEntity<>(request, headers);
 
             try {
@@ -568,6 +651,10 @@ public class OzonAdapter implements PlatformAdapter {
     }
 
     public List<OzonDeliveryMethodListResponse.DeliveryMethod> fetchDeliveryMethods(Long warehouseId, int limit) {
+        return fetchDeliveryMethods(warehouseId, limit, null);
+    }
+
+    public List<OzonDeliveryMethodListResponse.DeliveryMethod> fetchDeliveryMethods(Long warehouseId, int limit, Long shopId) {
         if (warehouseId == null) {
             return null;
         }
@@ -575,6 +662,7 @@ public class OzonAdapter implements PlatformAdapter {
         int offset = 0;
         int pageSize = limit > 0 ? limit : 100;
         boolean hasNext = true;
+        HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
         while (hasNext) {
             OzonDeliveryMethodListRequest request = new OzonDeliveryMethodListRequest();
@@ -584,7 +672,6 @@ public class OzonAdapter implements PlatformAdapter {
             request.setLimit(pageSize);
             request.setOffset(offset);
 
-            HttpHeaders headers = buildAuthHeaders();
             HttpEntity<OzonDeliveryMethodListRequest> entity = new HttpEntity<>(request, headers);
 
             try {
@@ -616,13 +703,18 @@ public class OzonAdapter implements PlatformAdapter {
 
     @Override
     public List<PlatformProduct> fetchProducts() {
-        return fetchProducts(null);
+        return fetchProducts(null, null);
     }
 
     public List<PlatformProduct> fetchProducts(String visibility) {
+        return fetchProducts(visibility, null);
+    }
+
+    public List<PlatformProduct> fetchProducts(String visibility, Long shopId) {
         try {
+            Long resolvedShopId = shopId != null ? shopId : defaultShopId;
             String visibilityValue = normalizeVisibility(visibility);
-            List<OzonProductListResponse.Item> productListItems = fetchProductList(visibilityValue);
+            List<OzonProductListResponse.Item> productListItems = fetchProductList(visibilityValue, shopId);
             if (productListItems == null || productListItems.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -636,14 +728,14 @@ public class OzonAdapter implements PlatformAdapter {
                 return new ArrayList<>();
             }
 
-            List<OzonProductInfoResponse.ProductInfo> productDetails = fetchProductDetails(productIds, visibilityValue);
+            List<OzonProductInfoResponse.ProductInfo> productDetails = fetchProductDetails(productIds, visibilityValue, shopId);
 
             List<PlatformProduct> platformProducts = productListItems.stream()
                     .map(this::convertToPlatformProduct)
                     .collect(Collectors.toList());
 
             if (productDetails != null && !productDetails.isEmpty()) {
-                syncProductDetailsToDatabase(productDetails);
+                syncProductDetailsToDatabase(productDetails, resolvedShopId);
             }
 
             return platformProducts;
@@ -657,13 +749,14 @@ public class OzonAdapter implements PlatformAdapter {
     /**
      * 获取商品列表
      */
-    private List<OzonProductListResponse.Item> fetchProductList(String visibility) {
+    private List<OzonProductListResponse.Item> fetchProductList(String visibility, Long shopId) {
         try {
             List<OzonProductListResponse.Item> allItems = new ArrayList<>();
             String lastId = "";
             boolean hasNext = true;
             int limit = 100;
             String visibilityValue = visibility != null && !visibility.trim().isEmpty() ? visibility : "MODERATED";
+            HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
             while (hasNext) {
                 OzonProductListRequest request = new OzonProductListRequest();
@@ -674,11 +767,6 @@ public class OzonAdapter implements PlatformAdapter {
                 request.setFilter(filter);
                 request.setLast_id(lastId);
                 request.setLimit(limit);
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-                headers.set("Client-Id", clientId);
-                headers.set("Api-Key", apiKey);
 
                 HttpEntity<OzonProductListRequest> entity = new HttpEntity<>(request, headers);
 
@@ -717,7 +805,7 @@ public class OzonAdapter implements PlatformAdapter {
     /**
      * 批量获取商品详情
      */
-    private List<OzonProductInfoResponse.ProductInfo> fetchProductDetails(List<String> productIds, String visibility) {
+    private List<OzonProductInfoResponse.ProductInfo> fetchProductDetails(List<String> productIds, String visibility, Long shopId) {
         if (productIds == null || productIds.isEmpty()) {
             return new ArrayList<>();
         }
@@ -735,7 +823,7 @@ public class OzonAdapter implements PlatformAdapter {
             boolean fetched = false;
             while (!fetched && attempt < maxAttempts) {
                 try {
-                    List<OzonProductInfoResponse.ProductInfo> batchDetails = fetchProductInfo(batch, visibility, batchSize, null, "ASC");
+                    List<OzonProductInfoResponse.ProductInfo> batchDetails = fetchProductInfo(batch, visibility, batchSize, null, "ASC", shopId);
                     if (batchDetails != null) {
                         allProductDetails.addAll(batchDetails);
                     }
@@ -761,7 +849,7 @@ public class OzonAdapter implements PlatformAdapter {
      * 可选 visibility：MODERATED / VISIBLE / IN_SALE / ARCHIVED / EMPTY_STOCK
      */
     public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(List<String> productIds) {
-        return fetchProductInfo(productIds, "MODERATED", 1000, null, "ASC");
+        return fetchProductInfo(productIds, "MODERATED", 1000, null, "ASC", null);
     }
 
     /**
@@ -773,6 +861,16 @@ public class OzonAdapter implements PlatformAdapter {
             Integer limit,
             String lastId,
             String sortDir) {
+        return fetchProductInfo(productIds, visibility, limit, lastId, sortDir, null);
+    }
+
+    public List<OzonProductInfoResponse.ProductInfo> fetchProductInfo(
+            List<String> productIds,
+            String visibility,
+            Integer limit,
+            String lastId,
+            String sortDir,
+            Long shopId) {
         try {
             OzonProductInfoRequest request = new OzonProductInfoRequest();
             request.setProduct_id(productIds);
@@ -782,10 +880,7 @@ public class OzonAdapter implements PlatformAdapter {
             request.setLast_id(lastId != null ? lastId : "");
             request.setSort_dir(sortDir != null ? sortDir : "ASC");
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Client-Id", clientId);
-            headers.set("Api-Key", apiKey);
+            HttpHeaders headers = buildAuthHeadersForShop(shopId);
 
             HttpEntity<OzonProductInfoRequest> entity = new HttpEntity<>(request, headers);
 
@@ -814,19 +909,21 @@ public class OzonAdapter implements PlatformAdapter {
     /**
      * 同步商品详情到数据库
      */
-    private void syncProductDetailsToDatabase(List<OzonProductInfoResponse.ProductInfo> productDetails) {
+    private void syncProductDetailsToDatabase(List<OzonProductInfoResponse.ProductInfo> productDetails, Long shopId) {
         if (ozonProductService == null || productDetails == null || productDetails.isEmpty()) {
             return;
         }
+        Long resolvedShopId = shopId != null ? shopId : defaultShopId;
 
         LocalDateTime now = LocalDateTime.now();
         Date nowDate = new Date();
 
         for (OzonProductInfoResponse.ProductInfo productInfo : productDetails) {
             try {
-                OzonProduct existingItem = ozonProductService.getById(productInfo.getId());
+                OzonProduct existingItem = ozonProductService.getById(productInfo.getId(), resolvedShopId);
 
                 OzonProduct productItem = convertToProductItem(productInfo);
+                productItem.setShopId(resolvedShopId);
 
                 if (existingItem != null) {
                     productItem.setId(existingItem.getId());

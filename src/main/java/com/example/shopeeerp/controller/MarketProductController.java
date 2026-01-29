@@ -10,6 +10,7 @@ import com.example.shopeeerp.pojo.MarketSalesEstimate;
 import com.example.shopeeerp.pojo.MarketTrendSignal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -44,6 +45,7 @@ public class MarketProductController {
      * GET /market/products?platform=ozon&keyword=xxx&brand=xxx&page=1&size=20
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> list(
             @RequestParam(defaultValue = "ozon") String platform,
             @RequestParam(required = false) String keyword,
@@ -71,6 +73,7 @@ public class MarketProductController {
      * GET /market/products/{platform}/{productId}
      */
     @GetMapping("/{platform}/{productId}")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getDetail(
             @PathVariable String platform,
             @PathVariable String productId) {
@@ -105,6 +108,7 @@ public class MarketProductController {
      * GET /market/products/{platform}/{productId}/snapshots?limit=30
      */
     @GetMapping("/{platform}/{productId}/snapshots")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getSnapshots(
             @PathVariable String platform,
             @PathVariable String productId,
@@ -124,6 +128,7 @@ public class MarketProductController {
      * GET /market/products/filters?platform=ozon
      */
     @GetMapping("/filters")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getFilters(@RequestParam(defaultValue = "ozon") String platform) {
         List<String> brands = productMapper.selectDistinctBrands(platform);
         List<String> categories = productMapper.selectDistinctCategories(platform);
@@ -140,6 +145,7 @@ public class MarketProductController {
      * GET /market/products/trending?platform=ozon&type=trend7d&limit=20
      */
     @GetMapping("/trending")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getTrending(
             @RequestParam(defaultValue = "ozon") String platform,
             @RequestParam(defaultValue = "trend7d") String type,
@@ -197,6 +203,7 @@ public class MarketProductController {
      * POST /market/products/ozon-sales-proxy
      */
     @PostMapping("/ozon-sales-proxy")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> ozonSalesProxy(@RequestBody Map<String, Object> requestBody) {
         String url = "https://seller.ozon.ru/api/site/seller-analytics/what_to_sell/data/v3";
 

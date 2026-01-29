@@ -16,6 +16,7 @@
         <result column="max_retries" property="maxRetries" jdbcType="INTEGER"/>
         <result column="last_error" property="lastError" jdbcType="VARCHAR"/>
         <result column="payload_json" property="payloadJson" jdbcType="LONGVARCHAR"/>
+        <result column="progress_json" property="progressJson" jdbcType="LONGVARCHAR"/>
         <result column="lock_owner" property="lockOwner" jdbcType="VARCHAR"/>
         <result column="lock_at" property="lockAt" jdbcType="TIMESTAMP"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
@@ -24,17 +25,17 @@
 
     <sql id="Base_Column_List">
         id, platform, market, url, data_type, status, priority, scheduled_at, fetched_at,
-        retry_count, max_retries, last_error, payload_json, lock_owner, lock_at, created_at, updated_at
+        retry_count, max_retries, last_error, payload_json, progress_json, lock_owner, lock_at, created_at, updated_at
     </sql>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.MarketScrapeTask">
         INSERT INTO market_scrape_task (
             platform, market, url, data_type, status, priority, scheduled_at, fetched_at,
-            retry_count, max_retries, last_error, payload_json, lock_owner, lock_at,
+            retry_count, max_retries, last_error, payload_json, progress_json, lock_owner, lock_at,
             created_at, updated_at
         ) VALUES (
             #{platform}, #{market}, #{url}, #{dataType}, #{status}, #{priority}, #{scheduledAt}, #{fetchedAt},
-            #{retryCount}, #{maxRetries}, #{lastError}, #{payloadJson}, #{lockOwner}, #{lockAt},
+            #{retryCount}, #{maxRetries}, #{lastError}, #{payloadJson}, #{progressJson}, #{lockOwner}, #{lockAt},
             #{createdAt}, #{updatedAt}
         )
     </insert>
@@ -42,15 +43,15 @@
     <insert id="insertBatch" parameterType="java.util.List">
         INSERT INTO market_scrape_task (
             platform, market, url, data_type, status, priority, scheduled_at, fetched_at,
-            retry_count, max_retries, last_error, payload_json, lock_owner, lock_at,
+            retry_count, max_retries, last_error, payload_json, progress_json, lock_owner, lock_at,
             created_at, updated_at
         ) VALUES
         <foreach collection="list" item="item" separator=",">
             (
                 #{item.platform}, #{item.market}, #{item.url}, #{item.dataType}, #{item.status},
                 #{item.priority}, #{item.scheduledAt}, #{item.fetchedAt}, #{item.retryCount},
-                #{item.maxRetries}, #{item.lastError}, #{item.payloadJson}, #{item.lockOwner},
-                #{item.lockAt}, #{item.createdAt}, #{item.updatedAt}
+                #{item.maxRetries}, #{item.lastError}, #{item.payloadJson}, #{item.progressJson},
+                #{item.lockOwner}, #{item.lockAt}, #{item.createdAt}, #{item.updatedAt}
             )
         </foreach>
     </insert>
@@ -82,6 +83,8 @@
         SET status = 'DONE',
             fetched_at = #{fetchedAt},
             last_error = NULL,
+            lock_owner = NULL,
+            lock_at = NULL,
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -94,6 +97,9 @@
                 ELSE 'FAILED'
             END,
             last_error = #{error},
+            scheduled_at = DATE_ADD(#{updatedAt}, INTERVAL #{delayMinutes} MINUTE),
+            lock_owner = NULL,
+            lock_at = NULL,
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -101,7 +107,7 @@
     <!-- 更新任务进度 -->
     <update id="updateProgress">
         UPDATE market_scrape_task
-        SET payload_json = #{progressJson},
+        SET progress_json = #{progressJson},
             updated_at = #{updatedAt}
         WHERE id = #{id}
           AND lock_owner = #{workerId}
@@ -113,6 +119,8 @@
         SET status = #{status},
             fetched_at = #{fetchedAt},
             last_error = #{errorMessage},
+            lock_owner = NULL,
+            lock_at = NULL,
             updated_at = #{updatedAt}
         WHERE id = #{id}
           AND lock_owner = #{workerId}
@@ -123,11 +131,26 @@
         UPDATE market_scrape_task
         SET status = 'PENDING',
             lock_owner = NULL,
+            lock_at = NULL,
             retry_count = COALESCE(retry_count, 0) + 1,
+            last_error = 'TIMEOUT',
             updated_at = #{updatedAt}
         WHERE status = 'IN_PROGRESS'
           AND lock_at <![CDATA[<]]> #{timeout}
           AND COALESCE(retry_count, 0) + 1 <![CDATA[<]]> COALESCE(max_retries, 3)
+    </update>
+
+    <update id="markTimeoutFailed">
+        UPDATE market_scrape_task
+        SET status = 'FAILED',
+            lock_owner = NULL,
+            lock_at = NULL,
+            retry_count = COALESCE(retry_count, 0) + 1,
+            last_error = 'TIMEOUT',
+            updated_at = #{updatedAt}
+        WHERE status = 'IN_PROGRESS'
+          AND lock_at <![CDATA[<]]> #{timeout}
+          AND COALESCE(retry_count, 0) + 1 <![CDATA[>=]]> COALESCE(max_retries, 3)
     </update>
 
     <!-- 查询任务列表 -->

@@ -19,7 +19,7 @@ public interface OrderMapper {
     /**
      * 根据ID删除订单记录
      */
-    int deleteById(Long orderId);
+    int deleteById(@Param("orderId") Long orderId, @Param("shopId") Long shopId);
 
     /**
      * 更新订单记录
@@ -29,15 +29,15 @@ public interface OrderMapper {
     /**
      * 根据ID查询订单记录
      */
-    Order selectById(Long orderId);
+    Order selectById(@Param("orderId") Long orderId, @Param("shopId") Long shopId);
 
     /**
      * 查询所有订单记录
      */
-    List<Order> selectAll();
+    List<Order> selectAll(@Param("shopId") Long shopId);
 
     /**
      * 根据客户ID查询订单记录
      */
-    List<Order> selectByCustomerId(@Param("customerId") Long customerId);
+    List<Order> selectByCustomerId(@Param("customerId") Long customerId, @Param("shopId") Long shopId);
 }

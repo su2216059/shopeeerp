@@ -17,6 +17,7 @@ CREATE TABLE market_scrape_task (
   max_retries INT DEFAULT 3 COMMENT 'max retries',
   last_error VARCHAR(255) COMMENT 'last error',
   payload_json LONGTEXT COMMENT 'extra payload',
+  progress_json LONGTEXT COMMENT 'task progress payload',
   lock_owner VARCHAR(64) COMMENT 'worker id',
   lock_at DATETIME COMMENT 'lock time',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

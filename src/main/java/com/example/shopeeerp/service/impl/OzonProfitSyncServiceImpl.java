@@ -31,7 +31,13 @@ public class OzonProfitSyncServiceImpl implements OzonProfitSyncService {
     @Override
     @Transactional
     public void sync(String postingNumber, String from, String to) {
-        List<OzonTransactionListResponse.Operation> ops = ozonAdapter.fetchTransactions(postingNumber, from, to, 1000);
+        sync(postingNumber, from, to, null);
+    }
+
+    @Override
+    @Transactional
+    public void sync(String postingNumber, String from, String to, Long shopId) {
+        List<OzonTransactionListResponse.Operation> ops = ozonAdapter.fetchTransactions(postingNumber, from, to, 1000, shopId);
         if (ops == null || ops.isEmpty()) {
             return;
         }

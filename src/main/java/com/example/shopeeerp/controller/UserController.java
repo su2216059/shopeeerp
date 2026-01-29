@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.User;
 import com.example.shopeeerp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -21,12 +22,14 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<List<User>> getAllUsers() {
         List<User> users = userService.selectAll();
         return ResponseEntity.ok(users);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         User user = userService.selectById(id);
         if (user != null) {
@@ -36,6 +39,7 @@ public class UserController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<User> createUser(@RequestBody User user) {
         LocalDateTime now = LocalDateTime.now();
         user.setCreatedAt(now);
@@ -48,6 +52,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
         user.setUserId(id);
         user.setUpdatedAt(LocalDateTime.now());
@@ -59,6 +64,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         int result = userService.deleteById(id);
         if (result > 0) {
@@ -68,6 +74,7 @@ public class UserController {
     }
 
     @GetMapping("/username/{username}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<User> getUserByUsername(@PathVariable String username) {
         User user = userService.selectByUsername(username);
         if (user != null) {
@@ -77,6 +84,7 @@ public class UserController {
     }
 
     @GetMapping("/role/{roleId}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<List<User>> getUsersByRoleId(@PathVariable Long roleId) {
         List<User> users = userService.selectByRoleId(roleId);
         return ResponseEntity.ok(users);

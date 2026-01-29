@@ -9,7 +9,11 @@ public interface OzonPostingService {
 
     List<OzonPosting> getAll();
 
+    List<OzonPosting> getAllByShopId(Long shopId);
+
     OzonPosting getByPostingNumber(String postingNumber);
+
+    OzonPosting getByPostingNumberAndShopId(String postingNumber, Long shopId);
 
     boolean save(OzonPosting posting);
 
@@ -18,6 +22,8 @@ public interface OzonPostingService {
     boolean update(OzonPosting posting);
 
     boolean updatePurchaseAmount(String postingNumber, BigDecimal purchaseAmount);
+
+    boolean updatePurchaseAmount(String postingNumber, Long shopId, BigDecimal purchaseAmount);
 
     boolean deleteByPostingNumber(String postingNumber);
 

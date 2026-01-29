@@ -6,12 +6,14 @@ import com.example.shopeeerp.pojo.OzonProductStatus;
 import com.example.shopeeerp.adapter.PlatformAdapter;
 import com.example.shopeeerp.adapter.PlatformAdapterFactory;
 import com.example.shopeeerp.adapter.model.PlatformProduct;
+import com.example.shopeeerp.security.ShopPermission;
 import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
 import com.example.shopeeerp.service.OzonProductStatusService;
 import com.example.shopeeerp.service.OzonProductStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -57,7 +59,10 @@ public class OzonProductController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('OZON_PRODUCT_VIEW')")
+    @ShopPermission
     public ResponseEntity<List<OzonProductView>> list(
+            @RequestParam("shopId") Long shopId,
             @RequestParam(value = "title", required = false) String title,
             @RequestParam(value = "product_code", required = false) String productCode,
             @RequestParam(value = "created_from", required = false) String createdFrom,
@@ -70,6 +75,7 @@ public class OzonProductController {
         String visibilityFilter = normalizeVisibilityFilter(visibility);
         List<OzonProduct> products = ozonProductService.getByFilters(
                 titleFilter,
+                shopId,
                 codeFilter,
                 from,
                 to,
@@ -85,7 +91,10 @@ public class OzonProductController {
      * 触发 Ozon 商品同步并返回同步条数
      */
     @GetMapping("/sync")
+    @PreAuthorize("hasAuthority('OZON_PRODUCT_SYNC')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> syncProducts(
+            @RequestParam("shopId") Long shopId,
             @RequestParam(value = "visibility", required = false) String visibility) {
         Map<String, Object> result = new HashMap<>();
         if (!syncing.compareAndSet(false, true)) {
@@ -99,7 +108,7 @@ public class OzonProductController {
             CompletableFuture.runAsync(() -> {
                 try {
                     if (adapter instanceof com.example.shopeeerp.adapter.impl.OzonAdapter) {
-                        ((com.example.shopeeerp.adapter.impl.OzonAdapter) adapter).fetchProducts(visibility);
+                        ((com.example.shopeeerp.adapter.impl.OzonAdapter) adapter).fetchProducts(visibility, shopId);
                     } else {
                         adapter.fetchProducts();
                     }

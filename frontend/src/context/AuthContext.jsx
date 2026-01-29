@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { authApi } from '../api'
+import { authApi, shopApi } from '../api'
 
 const AuthContext = createContext(null)
 
@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [permissions, setPermissions] = useState([])
 
   useEffect(() => {
     if (token) {
@@ -29,18 +30,33 @@ export const AuthProvider = ({ children }) => {
       const res = await authApi.getCurrentUser()
       if (res.data?.success) {
         setUser(res.data.user)
+        setPermissions(res.data.permissions || [])
+        syncCurrentShop()
       } else {
         // token 无效，清除
         localStorage.removeItem('token')
         setToken(null)
         setUser(null)
+        setPermissions([])
       }
     } catch (error) {
       localStorage.removeItem('token')
       setToken(null)
       setUser(null)
+      setPermissions([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const syncCurrentShop = async () => {
+    try {
+      const res = await shopApi.getCurrentShop()
+      if (res.data?.id) {
+        localStorage.setItem('currentShopId', String(res.data.id))
+      }
+    } catch (error) {
+      // ignore
     }
   }
 
@@ -50,6 +66,11 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', res.data.token)
       setToken(res.data.token)
       setUser(res.data.user)
+      setPermissions(res.data.permissions || [])
+      if (res.data?.currentShopId) {
+        localStorage.setItem('currentShopId', String(res.data.currentShopId))
+      }
+      syncCurrentShop()
       return { success: true }
     }
     return { success: false, message: res.data?.message || '登录失败' }
@@ -61,6 +82,11 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', res.data.token)
       setToken(res.data.token)
       setUser(res.data.user)
+      setPermissions(res.data.permissions || [])
+      if (res.data?.currentShopId) {
+        localStorage.setItem('currentShopId', String(res.data.currentShopId))
+      }
+      syncCurrentShop()
       return { success: true }
     }
     return { success: false, message: res.data?.message || '注册失败' }
@@ -73,19 +99,28 @@ export const AuthProvider = ({ children }) => {
       // 忽略错误
     }
     localStorage.removeItem('token')
+    localStorage.removeItem('currentShopId')
     setToken(null)
     setUser(null)
+    setPermissions([])
   }
+
+  const hasPermission = (permission) => permissions.includes(permission)
+  const hasAnyPermission = (permissionList = []) =>
+    permissionList.some((permission) => hasPermission(permission))
 
   const value = {
     user,
     token,
     loading,
+    permissions,
     isAuthenticated: !!user,
     login,
     register,
     logout,
     refreshUser: fetchCurrentUser,
+    hasPermission,
+    hasAnyPermission,
   }
 
   return (

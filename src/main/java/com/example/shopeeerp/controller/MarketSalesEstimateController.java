@@ -6,6 +6,7 @@ import com.example.shopeeerp.service.MarketSalesEstimateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -29,6 +30,7 @@ public class MarketSalesEstimateController {
      * GET /market/estimate/{platform}/{productId}?periodType=weekly
      */
     @GetMapping("/{platform}/{productId}")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getLatestEstimate(
             @PathVariable String platform,
             @PathVariable String productId,
@@ -48,6 +50,7 @@ public class MarketSalesEstimateController {
      * GET /market/estimate/{platform}/{productId}/history?periodType=weekly&limit=10
      */
     @GetMapping("/{platform}/{productId}/history")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getEstimateHistory(
             @PathVariable String platform,
             @PathVariable String productId,
@@ -64,6 +67,7 @@ public class MarketSalesEstimateController {
      * POST /market/estimate/calculate
      */
     @PostMapping("/calculate")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> calculateForProduct(@RequestBody CalculateRequest request) {
 
         MarketSalesEstimate estimate = estimateService.calculateForProduct(
@@ -89,6 +93,7 @@ public class MarketSalesEstimateController {
      * POST /market/estimate/calculate-batch
      */
     @PostMapping("/calculate-batch")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> calculateBatch(@RequestBody BatchCalculateRequest request) {
 
         MarketSalesEstimateService.BatchResult result = estimateService.calculateBatch(
@@ -106,6 +111,7 @@ public class MarketSalesEstimateController {
      * POST /market/estimate/calculate-daily?platform=ozon&date=2026-01-19
      */
     @PostMapping("/calculate-daily")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> calculateDaily(
             @RequestParam(defaultValue = "ozon") String platform,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -119,6 +125,7 @@ public class MarketSalesEstimateController {
      * POST /market/estimate/calculate-weekly?platform=ozon&weekEndDate=2026-01-19
      */
     @PostMapping("/calculate-weekly")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> calculateWeekly(
             @RequestParam(defaultValue = "ozon") String platform,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekEndDate) {
@@ -132,6 +139,7 @@ public class MarketSalesEstimateController {
      * POST /market/estimate/calculate-monthly?platform=ozon&monthEndDate=2026-01-31
      */
     @PostMapping("/calculate-monthly")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> calculateMonthly(
             @RequestParam(defaultValue = "ozon") String platform,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate monthEndDate) {
@@ -145,6 +153,7 @@ public class MarketSalesEstimateController {
      * POST /market/estimate/calculate-trend?platform=ozon&date=2026-01-19
      */
     @PostMapping("/calculate-trend")
+    @PreAuthorize("hasAuthority('MARKET_CALCULATE')")
     public ResponseEntity<?> calculateTrendSignals(
             @RequestParam(defaultValue = "ozon") String platform,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -158,6 +167,7 @@ public class MarketSalesEstimateController {
      * GET /market/estimate/{platform}/{productId}/trend
      */
     @GetMapping("/{platform}/{productId}/trend")
+    @PreAuthorize("hasAuthority('MARKET_VIEW')")
     public ResponseEntity<?> getTrendSignal(
             @PathVariable String platform,
             @PathVariable String productId) {

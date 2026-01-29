@@ -13,22 +13,22 @@ public interface OzonProductService {
     /**
      * 根据ID查询商品
      */
-    OzonProduct getById(Long id);
+    OzonProduct getById(Long id, Long shopId);
 
     /**
      * 根据offerId查询商品
      */
-    OzonProduct getByOfferId(String offerId);
+    OzonProduct getByOfferId(String offerId, Long shopId);
 
     /**
      * 根据SKU查询商品
      */
-    OzonProduct getBySku(Long sku);
+    OzonProduct getBySku(Long sku, Long shopId);
 
     /**
      * 查询所有商品
      */
-    List<OzonProduct> getAll();
+    List<OzonProduct> getAll(Long shopId);
 
     /**
      * 根据条件查询商品列表
@@ -39,6 +39,7 @@ public interface OzonProductService {
      * 根据筛选条件查询商品列表
      */
     List<OzonProduct> getByFilters(String title,
+                                   Long shopId,
                                    String productCode,
                                    LocalDateTime createdFrom,
                                    LocalDateTime createdTo,
@@ -47,7 +48,7 @@ public interface OzonProductService {
     /**
      * 分页查询商品列表
      */
-    List<OzonProduct> getByPage(int pageNum, int pageSize);
+    List<OzonProduct> getByPage(int pageNum, int pageSize, Long shopId);
 
     /**
      * 保存商品
@@ -67,17 +68,17 @@ public interface OzonProductService {
     /**
      * 根据ID删除商品
      */
-    boolean removeById(Long id);
+    boolean removeById(Long id, Long shopId);
 
     /**
      * 批量删除商品
      */
-    boolean removeBatch(List<Long> ids);
+    boolean removeBatch(List<Long> ids, Long shopId);
 
     /**
      * 统计商品数量
      */
-    long count();
+    long count(Long shopId);
 
     /**
      * 根据条件统计商品数量

@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
  */
 public class Product {
     private Long productId;
+    private Long shopId;
     private String sku;
     private String name;
     private String description;
@@ -25,6 +26,14 @@ public class Product {
 
     public void setProductId(Long productId) {
         this.productId = productId;
+    }
+
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
     }
 
     public String getSku() {

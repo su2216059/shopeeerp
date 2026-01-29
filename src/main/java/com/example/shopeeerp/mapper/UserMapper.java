@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -25,6 +26,13 @@ public interface UserMapper {
      * 更新用户记录
      */
     int update(User user);
+
+    /**
+     * 仅更新密码
+     */
+    int updatePasswordById(@Param("userId") Long userId,
+                           @Param("password") String password,
+                           @Param("updatedAt") LocalDateTime updatedAt);
 
     /**
      * 根据ID查询用户记录

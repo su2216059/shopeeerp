@@ -4,11 +4,14 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { userApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const UserList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const canManage = hasPermission('USER_MANAGE')
 
   useEffect(() => {
     fetchData()
@@ -71,21 +74,25 @@ const UserList = () => {
       width: 150,
       render: (_, record) => (
         <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/users/edit/${record.userId}`)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除吗？"
-            onConfirm={() => handleDelete(record.userId)}
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
+          {canManage && (
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/users/edit/${record.userId}`)}
+            >
+              Edit
             </Button>
-          </Popconfirm>
+          )}
+          {canManage && (
+            <Popconfirm
+              title="Confirm delete?"
+              onConfirm={() => handleDelete(record.userId)}
+            >
+              <Button type="link" danger icon={<DeleteOutlined />}>
+                Delete
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -95,13 +102,15 @@ const UserList = () => {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>用户管理</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/users/new')}
-        >
-          新增用户
-        </Button>
+        {canManage && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/users/new')}
+          >
+            New User
+          </Button>
+        )}
       </div>
       <Table
         columns={columns}

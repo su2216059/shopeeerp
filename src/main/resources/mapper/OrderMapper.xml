@@ -4,6 +4,7 @@
 
     <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Order">
         <id column="order_id" property="orderId" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
         <result column="customer_id" property="customerId" jdbcType="BIGINT"/>
         <result column="order_status" property="orderStatus" jdbcType="VARCHAR"/>
         <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
@@ -14,16 +15,16 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        order_id, customer_id, order_status, total_amount, payment_status, shipping_status, created_at, updated_at
+        order_id, shop_id, customer_id, order_status, total_amount, payment_status, shipping_status, created_at, updated_at
     </sql>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.Order" useGeneratedKeys="true" keyProperty="orderId">
-        INSERT INTO orders (customer_id, order_status, total_amount, payment_status, shipping_status, created_at, updated_at)
-        VALUES (#{customerId}, #{orderStatus}, #{totalAmount}, #{paymentStatus}, #{shippingStatus}, #{createdAt}, #{updatedAt})
+        INSERT INTO orders (shop_id, customer_id, order_status, total_amount, payment_status, shipping_status, created_at, updated_at)
+        VALUES (#{shopId}, #{customerId}, #{orderStatus}, #{totalAmount}, #{paymentStatus}, #{shippingStatus}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <delete id="deleteById" parameterType="java.lang.Long">
-        DELETE FROM orders WHERE order_id = #{orderId}
+    <delete id="deleteById" parameterType="map">
+        DELETE FROM orders WHERE order_id = #{orderId} AND shop_id = #{shopId}
     </delete>
 
     <update id="update" parameterType="com.example.shopeeerp.pojo.Order">
@@ -34,24 +35,25 @@
             payment_status = #{paymentStatus},
             shipping_status = #{shippingStatus},
             updated_at = #{updatedAt}
-        WHERE order_id = #{orderId}
+        WHERE order_id = #{orderId} AND shop_id = #{shopId}
     </update>
 
-    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectById" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM orders
-        WHERE order_id = #{orderId}
+        WHERE order_id = #{orderId} AND shop_id = #{shopId}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM orders
+        WHERE shop_id = #{shopId}
     </select>
 
-    <select id="selectByCustomerId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectByCustomerId" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM orders
-        WHERE customer_id = #{customerId}
+        WHERE customer_id = #{customerId} AND shop_id = #{shopId}
     </select>
 
 </mapper>

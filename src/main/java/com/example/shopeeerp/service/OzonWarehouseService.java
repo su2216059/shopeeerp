@@ -6,9 +6,9 @@ import java.util.List;
 
 public interface OzonWarehouseService {
 
-    OzonWarehouse getByWarehouseId(Long warehouseId);
+    OzonWarehouse getByWarehouseId(Long warehouseId, Long shopId);
 
-    List<OzonWarehouse> getAll();
+    List<OzonWarehouse> getAll(Long shopId);
 
     boolean save(OzonWarehouse warehouse);
 
@@ -16,5 +16,5 @@ public interface OzonWarehouseService {
 
     boolean saveBatch(List<OzonWarehouse> warehouses);
 
-    boolean removeByWarehouseId(Long warehouseId);
+    boolean removeByWarehouseId(Long warehouseId, Long shopId);
 }

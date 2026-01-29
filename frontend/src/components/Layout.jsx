@@ -29,7 +29,7 @@ const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, hasPermission, hasAnyPermission } = useAuth()
   const {
     token: { colorBgContainer },
   } = theme.useToken()
@@ -83,8 +83,8 @@ const Layout = ({ children }) => {
       icon: <UserOutlined />,
       label: '客户管理',
       children: [
-        { key: '/customers', label: '客户列表' },
-        { key: '/customer-support', label: '客户支持' },
+        { key: '/customers', label: '客户列表' , permission: 'CUSTOMER_VIEW'},
+        { key: '/customer-support', label: '客户支持' , permission: 'CUSTOMER_SUPPORT_VIEW'},
       ],
     },
     {
@@ -92,9 +92,9 @@ const Layout = ({ children }) => {
       icon: <ShoppingOutlined />,
       label: '产品管理',
       children: [
-        { key: '/products', label: '产品列表' },
+        { key: '/products', label: '产品列表' , permission: 'OZON_PRODUCT_VIEW'},
         { key: '/inventory', label: '库存管理' },
-        { key: '/warehouses', label: '仓库管理' },
+        { key: '/warehouses', label: '仓库管理' , permission: 'OZON_WAREHOUSE_VIEW'},
       ],
     },
     {
@@ -102,9 +102,8 @@ const Layout = ({ children }) => {
       icon: <ShoppingCartOutlined />,
       label: '订单管理',
       children: [
-        { key: '/ozon/orders', label: 'Ozon订单' },
-        { key: '/payments', label: '支付记录' },
-        { key: '/invoices', label: '发票管理' },
+        { key: '/ozon/orders', label: 'Ozon订单' , permission: 'OZON_ORDER_VIEW'},
+        { key: '/invoices', label: '发票管理' , permission: 'INVOICE_VIEW'},
       ],
     },
     {
@@ -120,9 +119,9 @@ const Layout = ({ children }) => {
       icon: <FundOutlined />,
       label: '市场信号',
       children: [
-        { key: '/market/products', label: '商品监控' },
-        { key: '/market/trending', label: '热门榜单' },
-        { key: '/market/compare', label: '商品比较' },
+        { key: '/market/products', label: '商品监控' , permission: 'MARKET_VIEW'},
+        { key: '/market/trending', label: '热门榜单' , permission: 'MARKET_VIEW'},
+        { key: '/market/compare', label: '商品比较' , permission: 'MARKET_VIEW'},
       ],
     },
     {
@@ -130,7 +129,7 @@ const Layout = ({ children }) => {
       icon: <ShopOutlined />,
       label: '店铺管理',
       children: [
-        { key: '/shops', label: '店铺列表' },
+        { key: '/shops', label: '店铺列表' , permission: 'SHOP_VIEW'},
       ],
     },
     {
@@ -138,11 +137,32 @@ const Layout = ({ children }) => {
       icon: <SafetyOutlined />,
       label: '系统管理',
       children: [
-        { key: '/users', label: '用户管理' },
-        { key: '/roles', label: '角色管理' },
+        { key: '/users', label: '用户管理' , permission: 'USER_MANAGE'},
+        { key: '/roles', label: '角色管理' , permission: 'ROLE_MANAGE'},
       ],
     },
   ]
+
+  const filterMenuItems = (items) =>
+    items
+      .map((item) => {
+        const children = item.children ? filterMenuItems(item.children) : null
+        const hasChildren = children && children.length > 0
+
+        if (item.permission && !hasPermission(item.permission)) {
+          return null
+        }
+        if (item.anyPermissions && !hasAnyPermission(item.anyPermissions)) {
+          return null
+        }
+
+        if (item.children) {
+          if (!hasChildren) return null
+          return { ...item, children }
+        }
+        return item
+      })
+      .filter(Boolean)
 
   const handleMenuClick = ({ key }) => {
     navigate(key)
@@ -156,7 +176,6 @@ const Layout = ({ children }) => {
     if (path.startsWith('/inventory')) return ['/inventory']
     if (path.startsWith('/warehouses')) return ['/warehouses']
     if (path.startsWith('/ozon/orders')) return ['/ozon/orders']
-    if (path.startsWith('/payments')) return ['/payments']
     if (path.startsWith('/invoices')) return ['/invoices']
     if (path.startsWith('/sales-data')) return ['/sales-data']
     if (path.startsWith('/market/products')) return ['/market/products']
@@ -188,7 +207,7 @@ const Layout = ({ children }) => {
           theme="dark"
           mode="inline"
           selectedKeys={getSelectedKeys()}
-          items={menuItems}
+          items={filterMenuItems(menuItems)}
           onClick={handleMenuClick}
         />
       </Sider>

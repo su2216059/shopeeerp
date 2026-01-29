@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Table, message, Button, Space, DatePicker, Tag, Image, Select, InputNumber, Modal } from 'antd'
 import { ozonOrderApi, ozonProfitApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const renderValue = (value) => {
   if (value === null || value === undefined || value === '') {
@@ -63,6 +64,10 @@ const OzonOrderList = () => {
   const [selectedRows, setSelectedRows] = useState([])
   const [exchangeRate, setExchangeRate] = useState(null)
   const purchaseDraftsRef = useRef({})
+  const { hasPermission } = useAuth()
+  const canSync = hasPermission('OZON_ORDER_SYNC')
+  const canProfitSync = hasPermission('OZON_PROFIT_SYNC')
+  const canUpdate = hasPermission('OZON_ORDER_UPDATE')
 
   const statusDict = {
     awaiting_registration: '等待注册',
@@ -314,6 +319,7 @@ const OzonOrderList = () => {
       render: (_, record) => (
         <InputNumber
           min={0}
+          disabled={!canUpdate}
           precision={2}
           value={toNumber(record.purchaseAmount)}
           onChange={(value) => handlePurchaseAmountChange(record.postingNumber, value)}
@@ -478,10 +484,10 @@ const OzonOrderList = () => {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>Ozon 订单列表</h1>
         <Space>
-          <Button type="primary" loading={syncing} onClick={() => setSyncModalOpen(true)}>
+          <Button type="primary" loading={syncing} onClick={() => setSyncModalOpen(true)} disabled={!canSync}>
             同步订单
           </Button>
-          <Button loading={syncingProfit} onClick={handleSyncProfit}>
+          <Button loading={syncingProfit} onClick={handleSyncProfit} disabled={!canProfitSync}>
             更新财务
           </Button>
         </Space>

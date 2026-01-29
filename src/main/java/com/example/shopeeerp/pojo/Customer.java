@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
  */
 public class Customer {
     private Long customerId;
+    private Long shopId;
     private String firstName;
     private String lastName;
     private String email;
@@ -24,6 +25,14 @@ public class Customer {
 
     public void setCustomerId(Long customerId) {
         this.customerId = customerId;
+    }
+
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
     }
 
     public String getFirstName() {

@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  Table, Button, Space, Card, Tag, message, Popconfirm, 
-  Modal, Tooltip, Badge, Typography 
+import {
+  Table, Button, Space, Card, Tag, message, Popconfirm,
+  Modal, Tooltip, Badge, Typography, Form, Input, Select
 } from 'antd'
-import { 
+import {
   PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined,
-  UserOutlined, CheckCircleOutlined, SyncOutlined, ShopOutlined
+  UserOutlined, SyncOutlined, ShopOutlined, LinkOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { shopApi } from '../../api'
 
 const { Title, Text } = Typography
+const { Option } = Select
 
 const ShopList = () => {
   const navigate = useNavigate()
   const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(false)
   const [currentShop, setCurrentShop] = useState(null)
+  const [bindVisible, setBindVisible] = useState(false)
+  const [bindLoading, setBindLoading] = useState(false)
+  const [bindForm] = Form.useForm()
 
   useEffect(() => {
     fetchShops()
@@ -39,8 +43,11 @@ const ShopList = () => {
     try {
       const res = await shopApi.getCurrentShop()
       setCurrentShop(res.data)
+      if (res.data?.id) {
+        localStorage.setItem('currentShopId', String(res.data.id))
+      }
     } catch (error) {
-      // 忽略错误
+      // ignore
     }
   }
 
@@ -57,10 +64,36 @@ const ShopList = () => {
   const handleSwitch = async (shopId) => {
     try {
       await shopApi.switchShop(shopId)
+      localStorage.setItem('currentShopId', String(shopId))
       message.success('切换成功')
       fetchCurrentShop()
     } catch (error) {
       message.error('切换失败')
+    }
+  }
+
+  const openBindModal = () => {
+    bindForm.resetFields()
+    setBindVisible(true)
+  }
+
+  const handleBind = async () => {
+    try {
+      const values = await bindForm.validateFields()
+      setBindLoading(true)
+      await shopApi.bind(values)
+      message.success('绑定成功')
+      setBindVisible(false)
+      fetchShops()
+      fetchCurrentShop()
+    } catch (error) {
+      if (error.errorFields) {
+        return
+      }
+      const msg = error?.response?.data?.message || '绑定失败'
+      message.error(msg)
+    } finally {
+      setBindLoading(false)
     }
   }
 
@@ -135,14 +168,14 @@ const ShopList = () => {
       key: 'status',
       width: 80,
       render: (status) => (
-        <Badge 
-          status={statusColors[status] || 'default'} 
-          text={statusLabels[status] || status} 
+        <Badge
+          status={statusColors[status] || 'default'}
+          text={statusLabels[status] || status}
         />
       ),
     },
     {
-      title: '时区/货币',
+      title: '时区/币种',
       key: 'locale',
       width: 150,
       render: (_, record) => (
@@ -167,9 +200,9 @@ const ShopList = () => {
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="切换到此店铺">
-            <Button 
+            <Button
               type={currentShop?.id === record.id ? 'primary' : 'default'}
-              size="small" 
+              size="small"
               icon={<SyncOutlined />}
               onClick={() => handleSwitch(record.id)}
               disabled={currentShop?.id === record.id}
@@ -178,8 +211,8 @@ const ShopList = () => {
             </Button>
           </Tooltip>
           <Tooltip title="凭证管理">
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               icon={<KeyOutlined />}
               onClick={() => navigate(`/shops/${record.id}/credential`)}
             >
@@ -187,8 +220,8 @@ const ShopList = () => {
             </Button>
           </Tooltip>
           <Tooltip title="账号管理">
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               icon={<UserOutlined />}
               onClick={() => navigate(`/shops/${record.id}/accounts`)}
             >
@@ -196,8 +229,8 @@ const ShopList = () => {
             </Button>
           </Tooltip>
           <Tooltip title="编辑">
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               icon={<EditOutlined />}
               onClick={() => navigate(`/shops/${record.id}/edit`)}
             />
@@ -229,8 +262,14 @@ const ShopList = () => {
                 当前店铺: <Text strong>{currentShop.shopName}</Text>
               </Text>
             )}
-            <Button 
-              type="primary" 
+            <Button
+              icon={<LinkOutlined />}
+              onClick={openBindModal}
+            >
+              绑定店铺
+            </Button>
+            <Button
+              type="primary"
               icon={<PlusOutlined />}
               onClick={() => navigate('/shops/new')}
             >
@@ -252,6 +291,83 @@ const ShopList = () => {
           }}
         />
       </Card>
+
+      <Modal
+        title="绑定店铺"
+        open={bindVisible}
+        onOk={handleBind}
+        onCancel={() => setBindVisible(false)}
+        confirmLoading={bindLoading}
+        destroyOnClose
+      >
+        <Form
+          form={bindForm}
+          layout="vertical"
+          initialValues={{ platform: 'ozon', market: 'RU' }}
+        >
+          <Form.Item
+            name="shopCode"
+            label="店铺编码"
+            rules={[{ required: true, message: '请输入店铺编码' }]}
+          >
+            <Input placeholder="如: OZON_MAIN" />
+          </Form.Item>
+
+          <Form.Item
+            name="shopName"
+            label="店铺名称"
+          >
+            <Input placeholder="可选" />
+          </Form.Item>
+
+          <Form.Item
+            name="platform"
+            label="平台"
+          >
+            <Select>
+              <Option value="ozon">ozon</Option>
+              <Option value="shopee">shopee</Option>
+              <Option value="wildberries">wildberries</Option>
+              <Option value="amazon">amazon</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="market"
+            label="市场"
+          >
+            <Select>
+              <Option value="RU">RU</Option>
+              <Option value="CN">CN</Option>
+              <Option value="US">US</Option>
+              <Option value="EU">EU</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="clientId"
+            label="Client ID"
+            rules={[{ required: true, message: '请输入 Client ID' }]}
+          >
+            <Input placeholder="Ozon Client ID" />
+          </Form.Item>
+
+          <Form.Item
+            name="apiKey"
+            label="API Key"
+            rules={[{ required: true, message: '请输入 API Key' }]}
+          >
+            <Input.Password placeholder="API Key" />
+          </Form.Item>
+
+          <Form.Item
+            name="apiSecret"
+            label="API Secret"
+          >
+            <Input.Password placeholder="可选" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

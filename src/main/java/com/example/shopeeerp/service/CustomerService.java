@@ -16,7 +16,7 @@ public interface CustomerService {
     /**
      * 根据ID删除客户记录
      */
-    int deleteById(Long customerId);
+    int deleteById(Long customerId, Long shopId);
 
     /**
      * 更新客户记录
@@ -26,15 +26,15 @@ public interface CustomerService {
     /**
      * 根据ID查询客户记录
      */
-    Customer selectById(Long customerId);
+    Customer selectById(Long customerId, Long shopId);
 
     /**
      * 查询所有客户记录
      */
-    List<Customer> selectAll();
+    List<Customer> selectAll(Long shopId);
 
     /**
      * 根据邮箱查询客户记录
      */
-    Customer selectByEmail(String email);
+    Customer selectByEmail(String email, Long shopId);
 }

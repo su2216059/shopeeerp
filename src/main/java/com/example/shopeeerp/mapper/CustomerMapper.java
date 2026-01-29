@@ -19,7 +19,7 @@ public interface CustomerMapper {
     /**
      * 根据ID删除客户记录
      */
-    int deleteById(Long customerId);
+    int deleteById(@Param("customerId") Long customerId, @Param("shopId") Long shopId);
 
     /**
      * 更新客户记录
@@ -29,15 +29,15 @@ public interface CustomerMapper {
     /**
      * 根据ID查询客户记录
      */
-    Customer selectById(Long customerId);
+    Customer selectById(@Param("customerId") Long customerId, @Param("shopId") Long shopId);
 
     /**
      * 查询所有客户记录
      */
-    List<Customer> selectAll();
+    List<Customer> selectAll(@Param("shopId") Long shopId);
 
     /**
      * 根据邮箱查询客户记录
      */
-    Customer selectByEmail(@Param("email") String email);
+    Customer selectByEmail(@Param("email") String email, @Param("shopId") Long shopId);
 }

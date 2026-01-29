@@ -7,15 +7,18 @@ import com.example.shopeeerp.adapter.dto.ozon.OzonWarehouseListResponse;
 import com.example.shopeeerp.adapter.impl.OzonAdapter;
 import com.example.shopeeerp.pojo.OzonDeliveryMethod;
 import com.example.shopeeerp.pojo.OzonWarehouse;
+import com.example.shopeeerp.security.ShopPermission;
 import com.example.shopeeerp.service.OzonDeliveryMethodService;
 import com.example.shopeeerp.service.OzonWarehouseService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -54,8 +57,10 @@ public class OzonWarehouseController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OzonWarehouseView>> list() {
-        List<OzonWarehouse> warehouses = ozonWarehouseService.getAll();
+    @PreAuthorize("hasAuthority('OZON_WAREHOUSE_VIEW')")
+    @ShopPermission
+    public ResponseEntity<List<OzonWarehouseView>> list(@RequestParam("shopId") Long shopId) {
+        List<OzonWarehouse> warehouses = ozonWarehouseService.getAll(shopId);
         List<Long> warehouseIds = warehouses.stream()
                 .map(OzonWarehouse::getWarehouseId)
                 .filter(Objects::nonNull)
@@ -69,7 +74,9 @@ public class OzonWarehouseController {
     }
 
     @PostMapping("/sync")
-    public ResponseEntity<Map<String, Object>> sync() {
+    @PreAuthorize("hasAuthority('OZON_WAREHOUSE_SYNC')")
+    @ShopPermission
+    public ResponseEntity<Map<String, Object>> sync(@RequestParam("shopId") Long shopId) {
         Map<String, Object> result = new HashMap<>();
         if (!syncing.compareAndSet(false, true)) {
             result.put("success", false);
@@ -88,7 +95,7 @@ public class OzonWarehouseController {
             OzonAdapter ozonAdapter = (OzonAdapter) adapter;
             CompletableFuture.runAsync(() -> {
                 try {
-                    performSync(ozonAdapter);
+                    performSync(ozonAdapter, shopId);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -107,8 +114,8 @@ public class OzonWarehouseController {
         }
     }
 
-    private void performSync(OzonAdapter ozonAdapter) {
-        List<OzonWarehouseListResponse.Warehouse> warehouseResponses = ozonAdapter.fetchWarehouses(100);
+    private void performSync(OzonAdapter ozonAdapter, Long shopId) {
+        List<OzonWarehouseListResponse.Warehouse> warehouseResponses = ozonAdapter.fetchWarehouses(100, shopId);
         if (warehouseResponses == null || warehouseResponses.isEmpty()) {
             return;
         }
@@ -119,8 +126,8 @@ public class OzonWarehouseController {
                 continue;
             }
 
-            OzonWarehouse entity = mapWarehouse(warehouseResp, now);
-            OzonWarehouse existing = ozonWarehouseService.getByWarehouseId(entity.getWarehouseId());
+            OzonWarehouse entity = mapWarehouse(warehouseResp, now, shopId);
+            OzonWarehouse existing = ozonWarehouseService.getByWarehouseId(entity.getWarehouseId(), shopId);
             if (existing != null) {
                 entity.setCreatedAt(existing.getCreatedAt());
                 ozonWarehouseService.update(entity);
@@ -130,7 +137,7 @@ public class OzonWarehouseController {
             }
 
             List<OzonDeliveryMethodListResponse.DeliveryMethod> methods =
-                    ozonAdapter.fetchDeliveryMethods(entity.getWarehouseId(), 100);
+                    ozonAdapter.fetchDeliveryMethods(entity.getWarehouseId(), 100, shopId);
             if (methods == null) {
                 continue;
             }
@@ -151,9 +158,12 @@ public class OzonWarehouseController {
         }
     }
 
-    private OzonWarehouse mapWarehouse(OzonWarehouseListResponse.Warehouse warehouseResp, LocalDateTime now) {
+    private OzonWarehouse mapWarehouse(OzonWarehouseListResponse.Warehouse warehouseResp,
+                                       LocalDateTime now,
+                                       Long shopId) {
         OzonWarehouse entity = new OzonWarehouse();
         entity.setWarehouseId(warehouseResp.getWarehouse_id());
+        entity.setShopId(shopId);
         entity.setName(warehouseResp.getName());
         entity.setStoreName("Ozon");
         entity.setStatus(warehouseResp.getStatus());

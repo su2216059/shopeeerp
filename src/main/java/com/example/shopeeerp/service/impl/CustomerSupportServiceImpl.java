@@ -23,8 +23,8 @@ public class CustomerSupportServiceImpl implements CustomerSupportService {
     }
 
     @Override
-    public int deleteById(Long supportId) {
-        return customerSupportMapper.deleteById(supportId);
+    public int deleteById(Long supportId, Long shopId) {
+        return customerSupportMapper.deleteById(supportId, shopId);
     }
 
     @Override
@@ -33,17 +33,17 @@ public class CustomerSupportServiceImpl implements CustomerSupportService {
     }
 
     @Override
-    public CustomerSupport selectById(Long supportId) {
-        return customerSupportMapper.selectById(supportId);
+    public CustomerSupport selectById(Long supportId, Long shopId) {
+        return customerSupportMapper.selectById(supportId, shopId);
     }
 
     @Override
-    public List<CustomerSupport> selectAll() {
-        return customerSupportMapper.selectAll();
+    public List<CustomerSupport> selectAll(Long shopId) {
+        return customerSupportMapper.selectAll(shopId);
     }
 
     @Override
-    public List<CustomerSupport> selectByCustomerId(Long customerId) {
-        return customerSupportMapper.selectByCustomerId(customerId);
+    public List<CustomerSupport> selectByCustomerId(Long customerId, Long shopId) {
+        return customerSupportMapper.selectByCustomerId(customerId, shopId);
     }
 }

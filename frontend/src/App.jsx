@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
+import PermissionRoute from './components/PermissionRoute'
 import Layout from './components/Layout'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
@@ -16,8 +17,6 @@ import OrderList from './pages/order/OrderList'
 import OrderForm from './pages/order/OrderForm'
 import OrderItemList from './pages/orderItem/OrderItemList'
 import OrderItemForm from './pages/orderItem/OrderItemForm'
-import PaymentList from './pages/payment/PaymentList'
-import PaymentForm from './pages/payment/PaymentForm'
 import InvoiceList from './pages/invoice/InvoiceList'
 import InvoiceForm from './pages/invoice/InvoiceForm'
 import InventoryList from './pages/inventory/InventoryList'
@@ -58,42 +57,101 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
           
           {/* 客户管理 */}
-          <Route path="/customers" element={<CustomerList />} />
-          <Route path="/customers/new" element={<CustomerForm />} />
-          <Route path="/customers/edit/:id" element={<CustomerForm />} />
+          <Route path="/customers" element={
+            <PermissionRoute permission="CUSTOMER_VIEW">
+              <CustomerList />
+            </PermissionRoute>
+          } />
+          <Route path="/customers/new" element={
+            <PermissionRoute permission="CUSTOMER_CREATE">
+              <CustomerForm />
+            </PermissionRoute>
+          } />
+          <Route path="/customers/edit/:id" element={
+            <PermissionRoute permission="CUSTOMER_UPDATE">
+              <CustomerForm />
+            </PermissionRoute>
+          } />
           
           {/* 客户支持 */}
-          <Route path="/customer-support" element={<CustomerSupportList />} />
-          <Route path="/customer-support/new" element={<CustomerSupportForm />} />
-          <Route path="/customer-support/edit/:id" element={<CustomerSupportForm />} />
+          <Route path="/customer-support" element={
+            <PermissionRoute permission="CUSTOMER_SUPPORT_VIEW">
+              <CustomerSupportList />
+            </PermissionRoute>
+          } />
+          <Route path="/customer-support/new" element={
+            <PermissionRoute permission="CUSTOMER_SUPPORT_CREATE">
+              <CustomerSupportForm />
+            </PermissionRoute>
+          } />
+          <Route path="/customer-support/edit/:id" element={
+            <PermissionRoute permission="CUSTOMER_SUPPORT_UPDATE">
+              <CustomerSupportForm />
+            </PermissionRoute>
+          } />
           
           {/* 产品管理 */}
-          <Route path="/products" element={<ProductList />} />
-          <Route path="/products/new" element={<ProductForm />} />
-          <Route path="/products/edit/:id" element={<ProductForm />} />
+          <Route path="/products" element={
+            <PermissionRoute permission="OZON_PRODUCT_VIEW">
+              <ProductList />
+            </PermissionRoute>
+          } />
+          <Route path="/products/new" element={
+            <PermissionRoute permission="OZON_PRODUCT_VIEW">
+              <ProductForm />
+            </PermissionRoute>
+          } />
+          <Route path="/products/edit/:id" element={
+            <PermissionRoute permission="OZON_PRODUCT_VIEW">
+              <ProductForm />
+            </PermissionRoute>
+          } />
           
           {/* 订单管理 */}
-          <Route path="/orders" element={<OrderList />} />
-          <Route path="/orders/new" element={<OrderForm />} />
-          <Route path="/orders/edit/:id" element={<OrderForm />} />
+          <Route path="/orders" element={
+            <PermissionRoute permission="ORDER_VIEW">
+              <OrderList />
+            </PermissionRoute>
+          } />
+          <Route path="/orders/new" element={
+            <PermissionRoute permission="ORDER_CREATE">
+              <OrderForm />
+            </PermissionRoute>
+          } />
+          <Route path="/orders/edit/:id" element={
+            <PermissionRoute permission="ORDER_UPDATE">
+              <OrderForm />
+            </PermissionRoute>
+          } />
           
           {/* 订单项管理 */}
           <Route path="/order-items" element={<OrderItemList />} />
           <Route path="/order-items/new" element={<OrderItemForm />} />
           <Route path="/order-items/edit/:id" element={<OrderItemForm />} />
           
-          {/* 支付管理 */}
-          <Route path="/payments" element={<PaymentList />} />
-          <Route path="/payments/new" element={<PaymentForm />} />
-          <Route path="/payments/edit/:id" element={<PaymentForm />} />
-
           {/* Ozon 订单 */}
-          <Route path="/ozon/orders" element={<OzonOrderList />} />
+          <Route path="/ozon/orders" element={
+            <PermissionRoute permission="OZON_ORDER_VIEW">
+              <OzonOrderList />
+            </PermissionRoute>
+          } />
           
           {/* 发票管理 */}
-          <Route path="/invoices" element={<InvoiceList />} />
-          <Route path="/invoices/new" element={<InvoiceForm />} />
-          <Route path="/invoices/edit/:id" element={<InvoiceForm />} />
+          <Route path="/invoices" element={
+            <PermissionRoute permission="INVOICE_VIEW">
+              <InvoiceList />
+            </PermissionRoute>
+          } />
+          <Route path="/invoices/new" element={
+            <PermissionRoute permission="INVOICE_CREATE">
+              <InvoiceForm />
+            </PermissionRoute>
+          } />
+          <Route path="/invoices/edit/:id" element={
+            <PermissionRoute permission="INVOICE_UPDATE">
+              <InvoiceForm />
+            </PermissionRoute>
+          } />
           
           {/* 库存管理 */}
           <Route path="/inventory" element={<InventoryList />} />
@@ -101,9 +159,21 @@ function App() {
           <Route path="/inventory/edit/:id" element={<InventoryForm />} />
           
           {/* 仓库管理 */}
-          <Route path="/warehouses" element={<WarehouseList />} />
-          <Route path="/warehouses/new" element={<WarehouseForm />} />
-          <Route path="/warehouses/edit/:id" element={<WarehouseForm />} />
+          <Route path="/warehouses" element={
+            <PermissionRoute permission="OZON_WAREHOUSE_VIEW">
+              <WarehouseList />
+            </PermissionRoute>
+          } />
+          <Route path="/warehouses/new" element={
+            <PermissionRoute permission="OZON_WAREHOUSE_VIEW">
+              <WarehouseForm />
+            </PermissionRoute>
+          } />
+          <Route path="/warehouses/edit/:id" element={
+            <PermissionRoute permission="OZON_WAREHOUSE_VIEW">
+              <WarehouseForm />
+            </PermissionRoute>
+          } />
           
           {/* 销售数据 */}
           <Route path="/sales-data" element={<SalesDataList />} />
@@ -111,27 +181,87 @@ function App() {
           <Route path="/sales-data/edit/:id" element={<SalesDataForm />} />
           
           {/* 用户管理 */}
-          <Route path="/users" element={<UserList />} />
-          <Route path="/users/new" element={<UserForm />} />
-          <Route path="/users/edit/:id" element={<UserForm />} />
+          <Route path="/users" element={
+            <PermissionRoute permission="USER_MANAGE">
+              <UserList />
+            </PermissionRoute>
+          } />
+          <Route path="/users/new" element={
+            <PermissionRoute permission="USER_MANAGE">
+              <UserForm />
+            </PermissionRoute>
+          } />
+          <Route path="/users/edit/:id" element={
+            <PermissionRoute permission="USER_MANAGE">
+              <UserForm />
+            </PermissionRoute>
+          } />
           
           {/* 角色管理 */}
-          <Route path="/roles" element={<RoleList />} />
-          <Route path="/roles/new" element={<RoleForm />} />
-          <Route path="/roles/edit/:id" element={<RoleForm />} />
+          <Route path="/roles" element={
+            <PermissionRoute permission="ROLE_MANAGE">
+              <RoleList />
+            </PermissionRoute>
+          } />
+          <Route path="/roles/new" element={
+            <PermissionRoute permission="ROLE_MANAGE">
+              <RoleForm />
+            </PermissionRoute>
+          } />
+          <Route path="/roles/edit/:id" element={
+            <PermissionRoute permission="ROLE_MANAGE">
+              <RoleForm />
+            </PermissionRoute>
+          } />
           
           {/* 市场信号 */}
-          <Route path="/market/products" element={<MarketProductList />} />
-          <Route path="/market/products/:platform/:productId" element={<MarketProductDetail />} />
-          <Route path="/market/trending" element={<MarketTrending />} />
-          <Route path="/market/compare" element={<MarketCompare />} />
+          <Route path="/market/products" element={
+            <PermissionRoute permission="MARKET_VIEW">
+              <MarketProductList />
+            </PermissionRoute>
+          } />
+          <Route path="/market/products/:platform/:productId" element={
+            <PermissionRoute permission="MARKET_VIEW">
+              <MarketProductDetail />
+            </PermissionRoute>
+          } />
+          <Route path="/market/trending" element={
+            <PermissionRoute permission="MARKET_VIEW">
+              <MarketTrending />
+            </PermissionRoute>
+          } />
+          <Route path="/market/compare" element={
+            <PermissionRoute permission="MARKET_VIEW">
+              <MarketCompare />
+            </PermissionRoute>
+          } />
           
           {/* 店铺管理 */}
-          <Route path="/shops" element={<ShopList />} />
-          <Route path="/shops/new" element={<ShopForm />} />
-          <Route path="/shops/:id/edit" element={<ShopForm />} />
-          <Route path="/shops/:shopId/credential" element={<ShopCredential />} />
-          <Route path="/shops/:shopId/accounts" element={<ShopAccounts />} />
+          <Route path="/shops" element={
+            <PermissionRoute permission="SHOP_VIEW">
+              <ShopList />
+            </PermissionRoute>
+          } />
+          <Route path="/shops/new" element={
+            <PermissionRoute permission="SHOP_CREATE">
+              <ShopForm />
+            </PermissionRoute>
+          } />
+          <Route path="/shops/:id/edit" element={
+            <PermissionRoute permission="SHOP_UPDATE">
+              <ShopForm />
+            </PermissionRoute>
+          } />
+          <Route path="/shops/:shopId/credential" element={
+            <PermissionRoute permission="SHOP_CREDENTIAL">
+              <ShopCredential />
+            </PermissionRoute>
+          } />
+          <Route path="/shops/:shopId/accounts" element={
+            <PermissionRoute permission="SHOP_ACCOUNT">
+              <ShopAccounts />
+            </PermissionRoute>
+          } />
                 </Routes>
               </Layout>
             </PrivateRoute>

@@ -30,7 +30,7 @@ public class MarketScrapeScheduler {
         try {
             int released = taskService.releaseTimeoutTasks(30);
             if (released > 0) {
-                log.info("Released {} timeout tasks", released);
+                log.info("Handled {} timeout tasks", released);
             }
         } catch (Exception e) {
             log.error("Failed to release timeout tasks", e);

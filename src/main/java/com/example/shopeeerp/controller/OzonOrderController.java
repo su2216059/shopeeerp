@@ -14,8 +14,10 @@ import com.example.shopeeerp.service.OzonPostingService;
 import com.example.shopeeerp.service.OzonProfitOperationService;
 import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
+import com.example.shopeeerp.security.ShopPermission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,7 +72,10 @@ public class OzonOrderController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('OZON_ORDER_VIEW')")
+    @ShopPermission
     public ResponseEntity<List<OzonPostingView>> list(
+            @RequestParam("shopId") Long shopId,
             @RequestParam(value = "created_from", required = false) String createdFrom,
             @RequestParam(value = "created_to", required = false) String createdTo,
             @RequestParam(value = "status", required = false) String status) {
@@ -78,21 +83,24 @@ public class OzonOrderController {
         LocalDateTime to = parseDateTime(createdTo);
         String statusFilter = status != null ? status.trim() : null;
 
-        List<OzonPosting> postings = ozonPostingService.getAll();
+        List<OzonPosting> postings = ozonPostingService.getAllByShopId(shopId);
         List<OzonPosting> filtered = postings.stream()
                 .filter(p -> matchesCreatedTime(p, from, to))
                 .filter(p -> statusFilter == null || statusFilter.isEmpty() || statusFilter.equalsIgnoreCase(p.getStatus()))
                 .collect(Collectors.toList());
         Map<String, List<OzonProfitOperation>> profitMap = loadProfitOperations(filtered);
         List<OzonPostingView> result = filtered.stream()
-                .map(p -> buildView(p, profitMap.get(p.getPostingNumber())))
+                .map(p -> buildView(p, profitMap.get(p.getPostingNumber()), shopId))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(result);
     }
 
     @PutMapping("/{postingNumber}/purchase-amount")
+    @PreAuthorize("hasAuthority('OZON_ORDER_UPDATE')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> updatePurchaseAmount(
             @PathVariable("postingNumber") String postingNumber,
+            @RequestParam("shopId") Long shopId,
             @RequestBody(required = false) PurchaseAmountRequest request) {
         Map<String, Object> resp = new HashMap<>();
         if (postingNumber == null || postingNumber.trim().isEmpty()) {
@@ -100,14 +108,14 @@ public class OzonOrderController {
             resp.put("message", "posting_number is required");
             return ResponseEntity.badRequest().body(resp);
         }
-        OzonPosting existing = ozonPostingService.getByPostingNumber(postingNumber);
+        OzonPosting existing = ozonPostingService.getByPostingNumberAndShopId(postingNumber, shopId);
         if (existing == null) {
             resp.put("success", false);
             resp.put("message", "posting_number not found");
             return ResponseEntity.status(404).body(resp);
         }
         BigDecimal amount = request != null ? request.getPurchaseAmount() : null;
-        boolean updated = ozonPostingService.updatePurchaseAmount(postingNumber, amount);
+        boolean updated = ozonPostingService.updatePurchaseAmount(postingNumber, shopId, amount);
         if (!updated) {
             resp.put("success", false);
             resp.put("message", "update failed");
@@ -119,7 +127,10 @@ public class OzonOrderController {
     }
 
     @GetMapping("/sync")
+    @PreAuthorize("hasAuthority('OZON_ORDER_SYNC')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> syncOrders(
+            @RequestParam("shopId") Long shopId,
             @RequestParam(value = "start", required = false) String start,
             @RequestParam(value = "end", required = false) String end) {
         Map<String, Object> result = new HashMap<>();
@@ -140,7 +151,7 @@ public class OzonOrderController {
             OzonAdapter ozonAdapter = (OzonAdapter) adapter;
             CompletableFuture.runAsync(() -> {
                 try {
-                    performSync(ozonAdapter, start, end);
+                    performSync(ozonAdapter, shopId, start, end);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -159,8 +170,8 @@ public class OzonOrderController {
         }
     }
 
-    private void performSync(OzonAdapter adapter, String start, String end) {
-        OzonPostingSyncResult syncResult = adapter.fetchPostings(start, end);
+    private void performSync(OzonAdapter adapter, Long shopId, String start, String end) {
+        OzonPostingSyncResult syncResult = adapter.fetchPostings(start, end, shopId);
         if (syncResult == null || syncResult.getPostings() == null || syncResult.getPostings().isEmpty()) {
             return;
         }
@@ -175,7 +186,7 @@ public class OzonOrderController {
             if (posting == null || posting.getPostingNumber() == null || posting.getPostingNumber().trim().isEmpty()) {
                 continue;
             }
-            OzonPosting existing = ozonPostingService.getByPostingNumber(posting.getPostingNumber());
+            OzonPosting existing = ozonPostingService.getByPostingNumberAndShopId(posting.getPostingNumber(), shopId);
             if (existing == null) {
                 ozonPostingService.save(posting);
             } else {
@@ -192,7 +203,9 @@ public class OzonOrderController {
         }
     }
 
-    private OzonPostingView buildView(OzonPosting posting, List<OzonProfitOperation> profitOperations) {
+    private OzonPostingView buildView(OzonPosting posting,
+                                      List<OzonProfitOperation> profitOperations,
+                                      Long shopId) {
         OzonPostingView view = new OzonPostingView();
         List<OzonPostingItem> items = ozonPostingItemService.getByPostingNumber(posting.getPostingNumber());
         view.setPostingNumber(posting.getPostingNumber());
@@ -211,7 +224,7 @@ public class OzonOrderController {
         view.setLastChangedAt(posting.getLastChangedAt());
         view.setAvailableActions(posting.getAvailableActions());
         view.setPrice(sumItemsPrice(items));
-        view.setImageUrl(resolveImageUrl(items));
+        view.setImageUrl(resolveImageUrl(items, shopId));
         BigDecimal ozonSalesAmount = sumAccrualsForSale(profitOperations);
         BigDecimal ozonLogisticsFee = sumLogisticsFee(profitOperations);
         BigDecimal ozonCommission = sumSaleCommission(profitOperations);
@@ -399,7 +412,7 @@ public class OzonOrderController {
         return total.compareTo(BigDecimal.ZERO) == 0 ? null : total;
     }
 
-    private String resolveImageUrl(List<OzonPostingItem> items) {
+    private String resolveImageUrl(List<OzonPostingItem> items, Long shopId) {
         if (items == null || items.isEmpty()) {
             return null;
         }
@@ -409,10 +422,10 @@ public class OzonOrderController {
             }
             OzonProduct product = null;
             if (item.getSku() != null) {
-                product = ozonProductService.getBySku(item.getSku());
+                product = ozonProductService.getBySku(item.getSku(), shopId);
             }
             if (product == null && item.getOfferId() != null && !item.getOfferId().trim().isEmpty()) {
-                product = ozonProductService.getByOfferId(item.getOfferId().trim());
+                product = ozonProductService.getByOfferId(item.getOfferId().trim(), shopId);
             }
             if (product == null || product.getId() == null) {
                 continue;

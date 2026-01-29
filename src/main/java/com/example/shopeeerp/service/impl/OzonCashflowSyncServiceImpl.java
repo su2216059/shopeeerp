@@ -45,11 +45,12 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
 
     @Override
     @Transactional
-    public void sync(LocalDateTime from, LocalDateTime to) {
+    public void sync(LocalDateTime from, LocalDateTime to, Long shopId) {
         String startIso = toIso(from != null ? from : LocalDateTime.now().minusDays(1));
         String endIso = toIso(to != null ? to : LocalDateTime.now());
+        Long resolvedShopId = shopId != null ? shopId : defaultShopId;
 
-        List<OzonCashflowResponse> responses = ozonAdapter.fetchCashflows(startIso, endIso, true, 50);
+        List<OzonCashflowResponse> responses = ozonAdapter.fetchCashflows(startIso, endIso, true, 50, shopId);
         for (OzonCashflowResponse resp : responses) {
             if (resp == null || resp.getResult() == null) {
                 continue;
@@ -63,11 +64,11 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
                     if (cf == null || cf.getPeriod() == null) {
                         continue;
                     }
-                    Long periodId = buildStablePeriodId(cf.getPeriod());
+                    Long periodId = buildStablePeriodId(cf.getPeriod(), resolvedShopId);
                     if (periodId == null) {
                         continue;
                     }
-                    OzonCashflowPeriod period = buildPeriod(cf.getPeriod(), resp.getPageCount(), periodId);
+                    OzonCashflowPeriod period = buildPeriod(cf.getPeriod(), resp.getPageCount(), periodId, resolvedShopId);
                     upsertPeriod(period);
 
                     OzonCashflowSummary summary = new OzonCashflowSummary();
@@ -94,11 +95,11 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
                     if (detailResp == null || detailResp.getPeriod() == null) {
                         continue;
                     }
-                    Long periodId = buildStablePeriodId(detailResp.getPeriod());
+                    Long periodId = buildStablePeriodId(detailResp.getPeriod(), resolvedShopId);
                     if (periodId == null) {
                         continue;
                     }
-                    OzonCashflowPeriod period = buildPeriod(detailResp.getPeriod(), resp.getPageCount(), periodId);
+                    OzonCashflowPeriod period = buildPeriod(detailResp.getPeriod(), resp.getPageCount(), periodId, resolvedShopId);
                     upsertPeriod(period);
 
                     // detail
@@ -195,13 +196,16 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
         }
     }
 
-    private OzonCashflowPeriod buildPeriod(OzonCashflowResponse.Period p, Integer pageCount, Long periodId) {
+    private OzonCashflowPeriod buildPeriod(OzonCashflowResponse.Period p,
+                                           Integer pageCount,
+                                           Long periodId,
+                                           Long shopId) {
         if (p == null || periodId == null) {
             return null;
         }
         OzonCashflowPeriod period = new OzonCashflowPeriod();
         period.setId(periodId);
-        period.setShopId(defaultShopId);
+        period.setShopId(shopId);
         period.setBeginTime(parseDateTime(p.getBegin()));
         period.setEndTime(parseDateTime(p.getEnd()));
         period.setPageCount(pageCount);
@@ -210,7 +214,7 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
         return period;
     }
 
-    private Long buildStablePeriodId(OzonCashflowResponse.Period p) {
+    private Long buildStablePeriodId(OzonCashflowResponse.Period p, Long shopId) {
         if (p == null) {
             return null;
         }
@@ -219,7 +223,7 @@ public class OzonCashflowSyncServiceImpl implements OzonCashflowSyncService {
         if (Strings.isBlank(begin) && Strings.isBlank(end)) {
             return p.getId();
         }
-        String raw = begin + "|" + end + "|shop:" + defaultShopId;
+        String raw = begin + "|" + end + "|shop:" + shopId;
         return Math.abs(UUID.nameUUIDFromBytes(raw.getBytes(StandardCharsets.UTF_8)).getMostSignificantBits());
     }
 

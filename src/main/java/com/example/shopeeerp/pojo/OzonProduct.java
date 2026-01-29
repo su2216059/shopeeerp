@@ -9,6 +9,7 @@ import java.util.Date;
  */
 public class OzonProduct {
     private Long id;
+    private Long shopId;
     private String offerId;
     private String name;
     private Long sku;
@@ -38,6 +39,14 @@ public class OzonProduct {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
     }
 
     public String getOfferId() {

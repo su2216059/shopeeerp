@@ -28,7 +28,8 @@ public interface MarketScrapeTaskMapper {
 
     int markFailure(@Param("id") Long id,
                     @Param("error") String error,
-                    @Param("updatedAt") LocalDateTime updatedAt);
+                    @Param("updatedAt") LocalDateTime updatedAt,
+                    @Param("delayMinutes") int delayMinutes);
 
     /**
      * 更新任务进度
@@ -53,6 +54,9 @@ public interface MarketScrapeTaskMapper {
      */
     int releaseTimeoutTasks(@Param("timeout") LocalDateTime timeout,
                            @Param("updatedAt") LocalDateTime updatedAt);
+
+    int markTimeoutFailed(@Param("timeout") LocalDateTime timeout,
+                         @Param("updatedAt") LocalDateTime updatedAt);
 
     /**
      * 查询任务列表

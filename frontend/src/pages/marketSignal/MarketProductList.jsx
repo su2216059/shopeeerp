@@ -4,6 +4,7 @@ import { SearchOutlined, ReloadOutlined, RiseOutlined, FallOutlined, LineChartOu
 import { useNavigate } from 'react-router-dom'
 import { marketProductApi, marketSignalApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const { Search } = Input
 
@@ -22,6 +23,8 @@ const MarketProductList = () => {
   const [categories, setCategories] = useState([])
   const [calculating, setCalculating] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
+  const { hasPermission } = useAuth()
+  const canCalculate = hasPermission('MARKET_CALCULATE')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -319,7 +322,7 @@ const MarketProductList = () => {
           <Button icon={<ReloadOutlined />} onClick={fetchData}>
             刷新
           </Button>
-          <Button type="primary" loading={calculating} onClick={handleCalculate}>
+          <Button type="primary" loading={calculating} onClick={handleCalculate} disabled={!canCalculate}>
             重新计算销量
           </Button>
         </Space>

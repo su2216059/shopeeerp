@@ -4,11 +4,16 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { orderApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const OrderList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('ORDER_CREATE')
+  const canUpdate = hasPermission('ORDER_UPDATE')
+  const canDelete = hasPermission('ORDER_DELETE')
 
   useEffect(() => {
     fetchData()
@@ -84,21 +89,25 @@ const OrderList = () => {
       width: 150,
       render: (_, record) => (
         <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/orders/edit/${record.orderId}`)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除吗？"
-            onConfirm={() => handleDelete(record.orderId)}
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
+          {canUpdate && (
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/orders/edit/${record.orderId}`)}
+            >
+              Edit
             </Button>
-          </Popconfirm>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Confirm delete?"
+              onConfirm={() => handleDelete(record.orderId)}
+            >
+              <Button type="link" danger icon={<DeleteOutlined />}>
+                Delete
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -108,13 +117,15 @@ const OrderList = () => {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <h1>订单管理</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/orders/new')}
-        >
-          新增订单
-        </Button>
+        {canCreate && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/orders/new')}
+          >
+            New Order
+          </Button>
+        )}
       </div>
       <Table
         columns={columns}

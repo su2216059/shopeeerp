@@ -51,8 +51,22 @@
         SELECT <include refid="Base_Column_List"/> FROM ozon_posting ORDER BY last_changed_at DESC
     </select>
 
+    <select id="selectByShopId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM ozon_posting
+        WHERE shop_id = #{shopId}
+        ORDER BY last_changed_at DESC
+    </select>
+
     <select id="selectByPostingNumber" parameterType="string" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/> FROM ozon_posting WHERE posting_number = #{postingNumber}
+    </select>
+
+    <select id="selectByPostingNumberAndShopId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM ozon_posting
+        WHERE posting_number = #{postingNumber}
+          AND shop_id = #{shopId}
     </select>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.OzonPosting">
@@ -132,6 +146,14 @@
             purchase_amount = #{purchaseAmount},
             updated_at = #{updatedAt}
         WHERE posting_number = #{postingNumber}
+    </update>
+
+    <update id="updatePurchaseAmountByShopId">
+        UPDATE ozon_posting SET
+            purchase_amount = #{purchaseAmount},
+            updated_at = #{updatedAt}
+        WHERE posting_number = #{postingNumber}
+          AND shop_id = #{shopId}
     </update>
 
     <delete id="deleteByPostingNumber" parameterType="string">

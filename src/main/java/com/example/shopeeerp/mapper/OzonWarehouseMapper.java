@@ -9,13 +9,13 @@ import java.util.List;
 @Mapper
 public interface OzonWarehouseMapper {
 
-    OzonWarehouse selectByWarehouseId(@Param("warehouseId") Long warehouseId);
+    OzonWarehouse selectByWarehouseId(@Param("warehouseId") Long warehouseId, @Param("shopId") Long shopId);
 
-    List<OzonWarehouse> selectAll();
+    List<OzonWarehouse> selectAll(@Param("shopId") Long shopId);
 
     int insert(OzonWarehouse warehouse);
 
     int updateByWarehouseId(OzonWarehouse warehouse);
 
-    int deleteByWarehouseId(@Param("warehouseId") Long warehouseId);
+    int deleteByWarehouseId(@Param("warehouseId") Long warehouseId, @Param("shopId") Long shopId);
 }

@@ -3,6 +3,8 @@ package com.example.shopeeerp.controller;
 import com.example.shopeeerp.service.OzonCashflowSyncService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.example.shopeeerp.security.ShopPermission;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,14 +26,17 @@ public class OzonCashflowController {
     private OzonCashflowSyncService cashflowSyncService;
 
     @GetMapping("/sync")
+    @PreAuthorize("hasAuthority('OZON_CASHFLOW_SYNC')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> sync(
+            @RequestParam("shopId") Long shopId,
             @RequestParam(value = "start", required = false) String start,
             @RequestParam(value = "end", required = false) String end) {
         Map<String, Object> resp = new HashMap<>();
         try {
             LocalDateTime from = parseIso(start);
             LocalDateTime to = parseIso(end);
-            cashflowSyncService.sync(from, to);
+            cashflowSyncService.sync(from, to, shopId);
             resp.put("success", true);
             resp.put("message", "财务报表同步完成");
             return ResponseEntity.ok(resp);

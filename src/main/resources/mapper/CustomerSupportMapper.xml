@@ -4,6 +4,7 @@
 
     <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.CustomerSupport">
         <id column="support_id" property="supportId" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
         <result column="customer_id" property="customerId" jdbcType="BIGINT"/>
         <result column="issue_description" property="issueDescription" jdbcType="VARCHAR"/>
         <result column="status" property="status" jdbcType="VARCHAR"/>
@@ -12,16 +13,16 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        support_id, customer_id, issue_description, status, created_at, updated_at
+        support_id, shop_id, customer_id, issue_description, status, created_at, updated_at
     </sql>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.CustomerSupport" useGeneratedKeys="true" keyProperty="supportId">
-        INSERT INTO customer_support (customer_id, issue_description, status, created_at, updated_at)
-        VALUES (#{customerId}, #{issueDescription}, #{status}, #{createdAt}, #{updatedAt})
+        INSERT INTO customer_support (shop_id, customer_id, issue_description, status, created_at, updated_at)
+        VALUES (#{shopId}, #{customerId}, #{issueDescription}, #{status}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <delete id="deleteById" parameterType="java.lang.Long">
-        DELETE FROM customer_support WHERE support_id = #{supportId}
+    <delete id="deleteById" parameterType="map">
+        DELETE FROM customer_support WHERE support_id = #{supportId} AND shop_id = #{shopId}
     </delete>
 
     <update id="update" parameterType="com.example.shopeeerp.pojo.CustomerSupport">
@@ -30,24 +31,25 @@
             issue_description = #{issueDescription},
             status = #{status},
             updated_at = #{updatedAt}
-        WHERE support_id = #{supportId}
+        WHERE support_id = #{supportId} AND shop_id = #{shopId}
     </update>
 
-    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectById" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM customer_support
-        WHERE support_id = #{supportId}
+        WHERE support_id = #{supportId} AND shop_id = #{shopId}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM customer_support
+        WHERE shop_id = #{shopId}
     </select>
 
-    <select id="selectByCustomerId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectByCustomerId" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM customer_support
-        WHERE customer_id = #{customerId}
+        WHERE customer_id = #{customerId} AND shop_id = #{shopId}
     </select>
 
 </mapper>

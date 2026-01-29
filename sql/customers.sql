@@ -23,6 +23,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `customers`;
 CREATE TABLE `customers`  (
   `customer_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `shop_id` bigint(0) NOT NULL,
   `first_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `last_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -31,7 +32,8 @@ CREATE TABLE `customers`  (
   `created_at` timestamp(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
   `updated_at` timestamp(0) NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0),
   PRIMARY KEY (`customer_id`) USING BTREE,
-  UNIQUE INDEX `email`(`email`) USING BTREE
+  UNIQUE INDEX `uk_customers_shop_email`(`shop_id`, `email`) USING BTREE,
+  INDEX `idx_customers_shop_id`(`shop_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

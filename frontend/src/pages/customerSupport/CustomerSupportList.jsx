@@ -4,11 +4,16 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { customerSupportApi } from '../../api'
 import { formatDateTime } from '../../utils/dateUtils'
+import { useAuth } from '../../context/AuthContext'
 
 const CustomerSupportList = () => {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('CUSTOMER_SUPPORT_CREATE')
+  const canUpdate = hasPermission('CUSTOMER_SUPPORT_UPDATE')
+  const canDelete = hasPermission('CUSTOMER_SUPPORT_DELETE')
 
   useEffect(() => {
     fetchData()
@@ -75,6 +80,7 @@ const CustomerSupportList = () => {
           <Button
             type="link"
             icon={<EditOutlined />}
+            disabled={!canUpdate}
             onClick={() => navigate(`/customer-support/edit/${record.supportId}`)}
           >
             编辑
@@ -83,7 +89,7 @@ const CustomerSupportList = () => {
             title="确定要删除吗？"
             onConfirm={() => handleDelete(record.supportId)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canDelete}>
               删除
             </Button>
           </Popconfirm>
@@ -99,6 +105,7 @@ const CustomerSupportList = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
+          disabled={!canCreate}
           onClick={() => navigate('/customer-support/new')}
         >
           新增支持记录

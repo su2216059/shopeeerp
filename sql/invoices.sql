@@ -23,11 +23,13 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `invoices`;
 CREATE TABLE `invoices`  (
   `invoice_id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `shop_id` bigint(0) NOT NULL,
   `order_id` bigint(0) NOT NULL,
   `invoice_number` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `issue_date` timestamp(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
   `total_amount` decimal(10, 2) NOT NULL,
   PRIMARY KEY (`invoice_id`) USING BTREE,
+  INDEX `idx_invoices_shop_id`(`shop_id`) USING BTREE,
   INDEX `order_id`(`order_id`) USING BTREE,
   CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;

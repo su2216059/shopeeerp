@@ -23,8 +23,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    public int deleteById(Long invoiceId) {
-        return invoiceMapper.deleteById(invoiceId);
+    public int deleteById(Long invoiceId, Long shopId) {
+        return invoiceMapper.deleteById(invoiceId, shopId);
     }
 
     @Override
@@ -33,17 +33,17 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    public Invoice selectById(Long invoiceId) {
-        return invoiceMapper.selectById(invoiceId);
+    public Invoice selectById(Long invoiceId, Long shopId) {
+        return invoiceMapper.selectById(invoiceId, shopId);
     }
 
     @Override
-    public List<Invoice> selectAll() {
-        return invoiceMapper.selectAll();
+    public List<Invoice> selectAll(Long shopId) {
+        return invoiceMapper.selectAll(shopId);
     }
 
     @Override
-    public List<Invoice> selectByOrderId(Long orderId) {
-        return invoiceMapper.selectByOrderId(orderId);
+    public List<Invoice> selectByOrderId(Long orderId, Long shopId) {
+        return invoiceMapper.selectByOrderId(orderId, shopId);
     }
 }

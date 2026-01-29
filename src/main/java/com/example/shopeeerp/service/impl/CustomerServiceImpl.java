@@ -23,8 +23,8 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public int deleteById(Long customerId) {
-        return customerMapper.deleteById(customerId);
+    public int deleteById(Long customerId, Long shopId) {
+        return customerMapper.deleteById(customerId, shopId);
     }
 
     @Override
@@ -33,17 +33,17 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Customer selectById(Long customerId) {
-        return customerMapper.selectById(customerId);
+    public Customer selectById(Long customerId, Long shopId) {
+        return customerMapper.selectById(customerId, shopId);
     }
 
     @Override
-    public List<Customer> selectAll() {
-        return customerMapper.selectAll();
+    public List<Customer> selectAll(Long shopId) {
+        return customerMapper.selectAll(shopId);
     }
 
     @Override
-    public Customer selectByEmail(String email) {
-        return customerMapper.selectByEmail(email);
+    public Customer selectByEmail(String email, Long shopId) {
+        return customerMapper.selectByEmail(email, shopId);
     }
 }

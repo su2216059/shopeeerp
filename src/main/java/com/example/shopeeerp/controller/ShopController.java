@@ -1,12 +1,17 @@
 package com.example.shopeeerp.controller;
 
+import com.example.shopeeerp.mapper.ShopMapper;
 import com.example.shopeeerp.pojo.Shop;
 import com.example.shopeeerp.pojo.ShopAccount;
 import com.example.shopeeerp.pojo.ShopCredential;
+import com.example.shopeeerp.security.ShopPermission;
+import com.example.shopeeerp.security.SecurityUtil;
 import com.example.shopeeerp.service.ShopService;
+import com.example.shopeeerp.service.UserShopService;
 import com.example.shopeeerp.util.CryptoUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -25,12 +30,19 @@ public class ShopController {
     @Autowired
     private ShopService shopService;
 
+    @Autowired
+    private UserShopService userShopService;
+
+    @Autowired
+    private ShopMapper shopMapper;
+
     // ========== 店铺管理 ==========
 
     /**
      * 获取所有店铺列表
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<List<Shop>> getAllShops() {
         return ResponseEntity.ok(shopService.getAllShops());
     }
@@ -39,6 +51,8 @@ public class ShopController {
      * 获取店铺详情
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
+    @ShopPermission(param = "id")
     public ResponseEntity<Shop> getShop(@PathVariable Long id) {
         Shop shop = shopService.getShopById(id);
         if (shop == null) {
@@ -51,7 +65,11 @@ public class ShopController {
      * 创建店铺
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('SHOP_CREATE')")
     public ResponseEntity<Shop> createShop(@RequestBody Shop shop) {
+        if (shop.getOwnerUserId() == null) {
+            shop.setOwnerUserId(SecurityUtil.getCurrentUserId());
+        }
         Shop created = shopService.createShop(shop);
         return ResponseEntity.ok(created);
     }
@@ -60,6 +78,8 @@ public class ShopController {
      * 更新店铺
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('SHOP_UPDATE')")
+    @ShopPermission(param = "id")
     public ResponseEntity<Shop> updateShop(@PathVariable Long id, @RequestBody Shop shop) {
         shop.setId(id);
         Shop updated = shopService.updateShop(shop);
@@ -70,6 +90,8 @@ public class ShopController {
      * 删除店铺
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('SHOP_DELETE')")
+    @ShopPermission(param = "id")
     public ResponseEntity<Void> deleteShop(@PathVariable Long id) {
         shopService.deleteShop(id);
         return ResponseEntity.ok().build();
@@ -79,6 +101,7 @@ public class ShopController {
      * 获取默认店铺
      */
     @GetMapping("/default")
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<Shop> getDefaultShop() {
         Shop shop = shopService.getDefaultShop();
         if (shop == null) {
@@ -91,6 +114,7 @@ public class ShopController {
      * 按平台获取店铺
      */
     @GetMapping("/platform/{platform}")
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<List<Shop>> getShopsByPlatform(@PathVariable String platform) {
         return ResponseEntity.ok(shopService.getShopsByPlatform(platform));
     }
@@ -101,6 +125,8 @@ public class ShopController {
      * 获取店铺的API凭证 (掩码显示敏感信息)
      */
     @GetMapping("/{shopId}/credential")
+    @PreAuthorize("hasAuthority('SHOP_CREDENTIAL')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> getCredential(@PathVariable Long shopId) {
         ShopCredential credential = shopService.getCredential(shopId);
         if (credential == null) {
@@ -126,6 +152,8 @@ public class ShopController {
      * 保存/更新API凭证
      */
     @PostMapping("/{shopId}/credential")
+    @PreAuthorize("hasAuthority('SHOP_CREDENTIAL')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> saveCredential(
             @PathVariable Long shopId,
             @RequestBody CredentialRequest request) {
@@ -150,6 +178,8 @@ public class ShopController {
      * 验证凭证
      */
     @PostMapping("/{shopId}/credential/verify")
+    @PreAuthorize("hasAuthority('SHOP_CREDENTIAL')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> verifyCredential(@PathVariable Long shopId) {
         boolean valid = shopService.verifyCredential(shopId);
 
@@ -167,6 +197,8 @@ public class ShopController {
      * 获取店铺的登录账号列表
      */
     @GetMapping("/{shopId}/accounts")
+    @PreAuthorize("hasAuthority('SHOP_ACCOUNT')")
+    @ShopPermission
     public ResponseEntity<List<Map<String, Object>>> getAccounts(@PathVariable Long shopId) {
         List<ShopAccount> accounts = shopService.getAccountsByShopId(shopId);
         
@@ -191,6 +223,8 @@ public class ShopController {
      * 添加登录账号
      */
     @PostMapping("/{shopId}/accounts")
+    @PreAuthorize("hasAuthority('SHOP_ACCOUNT')")
+    @ShopPermission
     public ResponseEntity<ShopAccount> addAccount(
             @PathVariable Long shopId,
             @RequestBody ShopAccount account) {
@@ -206,6 +240,8 @@ public class ShopController {
      * 更新登录账号
      */
     @PutMapping("/{shopId}/accounts/{accountId}")
+    @PreAuthorize("hasAuthority('SHOP_ACCOUNT')")
+    @ShopPermission
     public ResponseEntity<ShopAccount> updateAccount(
             @PathVariable Long shopId,
             @PathVariable Long accountId,
@@ -224,6 +260,8 @@ public class ShopController {
      * 删除登录账号
      */
     @DeleteMapping("/{shopId}/accounts/{accountId}")
+    @PreAuthorize("hasAuthority('SHOP_ACCOUNT')")
+    @ShopPermission
     public ResponseEntity<Void> deleteAccount(
             @PathVariable Long shopId,
             @PathVariable Long accountId) {
@@ -236,6 +274,8 @@ public class ShopController {
      * 获取账号详情（包含解密的密码，需要权限控制）
      */
     @GetMapping("/{shopId}/accounts/{accountId}/detail")
+    @PreAuthorize("hasAuthority('SHOP_ACCOUNT')")
+    @ShopPermission
     public ResponseEntity<ShopAccount> getAccountDetail(
             @PathVariable Long shopId,
             @PathVariable Long accountId) {
@@ -253,6 +293,8 @@ public class ShopController {
      * 切换当前店铺
      */
     @PostMapping("/{shopId}/switch")
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
+    @ShopPermission
     public ResponseEntity<Map<String, Object>> switchShop(@PathVariable Long shopId) {
         shopService.switchShop(shopId);
         Shop shop = shopService.getCurrentShop();
@@ -269,6 +311,7 @@ public class ShopController {
      * 获取当前店铺
      */
     @GetMapping("/current")
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<Shop> getCurrentShop() {
         Shop shop = shopService.getCurrentShop();
         if (shop == null) {
@@ -277,7 +320,71 @@ public class ShopController {
         return ResponseEntity.ok(shop);
     }
 
-    // ========== 请求体类 ==========
+    /**
+     * Bind shop with credentials.
+     */
+    @PostMapping("/bind")
+    @PreAuthorize("hasAuthority('SHOP_VIEW')")
+    public ResponseEntity<Map<String, Object>> bindShop(@RequestBody BindShopRequest request) {
+        Map<String, Object> result = new HashMap<>();
+
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) {
+            result.put("success", false);
+            result.put("message", "Unauthorized");
+            return ResponseEntity.status(401).body(result);
+        }
+
+        if (request.getClientId() == null || request.getClientId().trim().isEmpty()) {
+            result.put("success", false);
+            result.put("message", "clientId is required");
+            return ResponseEntity.badRequest().body(result);
+        }
+        if (request.getApiKey() == null || request.getApiKey().trim().isEmpty()) {
+            result.put("success", false);
+            result.put("message", "apiKey is required");
+            return ResponseEntity.badRequest().body(result);
+        }
+
+        Shop shop = null;
+        if (request.getShopId() != null) {
+            shop = shopMapper.selectById(request.getShopId());
+        } else if (request.getShopCode() != null && !request.getShopCode().trim().isEmpty()) {
+            shop = shopMapper.selectByCode(request.getShopCode().trim());
+        }
+
+        if (shop == null) {
+            if (request.getShopCode() == null || request.getShopCode().trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "shopCode is required");
+                return ResponseEntity.badRequest().body(result);
+            }
+            Shop create = new Shop();
+            create.setShopCode(request.getShopCode().trim());
+            create.setShopName(request.getShopName() == null || request.getShopName().trim().isEmpty()
+                    ? request.getShopCode().trim()
+                    : request.getShopName().trim());
+            create.setPlatform(request.getPlatform() == null ? "ozon" : request.getPlatform());
+            create.setMarket(request.getMarket() == null ? "RU" : request.getMarket());
+            create.setOwnerUserId(userId);
+            shop = shopService.createShop(create);
+        } else if (!SecurityUtil.isAdmin() && !userShopService.hasShopAccess(userId, shop.getId())) {
+            userShopService.addUserShop(userId, shop.getId(), "owner");
+        }
+
+        shopService.saveCredential(shop.getId(),
+                request.getClientId().trim(),
+                request.getApiKey().trim(),
+                request.getApiSecret());
+
+        result.put("success", true);
+        result.put("shopId", shop.getId());
+        result.put("shopCode", shop.getShopCode());
+        result.put("message", "Shop bound");
+
+        return ResponseEntity.ok(result);
+    }
+    // ========== Request Classes ==========
 
     public static class CredentialRequest {
         private String clientId;
@@ -308,4 +415,80 @@ public class ShopController {
             this.apiSecret = apiSecret;
         }
     }
+
+    public static class BindShopRequest {
+        private Long shopId;
+        private String shopCode;
+        private String shopName;
+        private String platform;
+        private String market;
+        private String clientId;
+        private String apiKey;
+        private String apiSecret;
+
+        public Long getShopId() {
+            return shopId;
+        }
+
+        public void setShopId(Long shopId) {
+            this.shopId = shopId;
+        }
+
+        public String getShopCode() {
+            return shopCode;
+        }
+
+        public void setShopCode(String shopCode) {
+            this.shopCode = shopCode;
+        }
+
+        public String getShopName() {
+            return shopName;
+        }
+
+        public void setShopName(String shopName) {
+            this.shopName = shopName;
+        }
+
+        public String getPlatform() {
+            return platform;
+        }
+
+        public void setPlatform(String platform) {
+            this.platform = platform;
+        }
+
+        public String getMarket() {
+            return market;
+        }
+
+        public void setMarket(String market) {
+            this.market = market;
+        }
+
+        public String getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
+        }
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getApiSecret() {
+            return apiSecret;
+        }
+
+        public void setApiSecret(String apiSecret) {
+            this.apiSecret = apiSecret;
+        }
+    }
+
 }

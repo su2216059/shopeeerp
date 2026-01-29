@@ -3,5 +3,9 @@ package com.example.shopeeerp.service;
 import java.time.LocalDateTime;
 
 public interface OzonCashflowSyncService {
-    void sync(LocalDateTime from, LocalDateTime to);
+    default void sync(LocalDateTime from, LocalDateTime to) {
+        sync(from, to, null);
+    }
+
+    void sync(LocalDateTime from, LocalDateTime to, Long shopId);
 }

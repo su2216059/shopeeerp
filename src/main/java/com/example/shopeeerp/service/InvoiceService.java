@@ -9,9 +9,9 @@ import java.util.List;
  */
 public interface InvoiceService {
     int insert(Invoice invoice);
-    int deleteById(Long invoiceId);
+    int deleteById(Long invoiceId, Long shopId);
     int update(Invoice invoice);
-    Invoice selectById(Long invoiceId);
-    List<Invoice> selectAll();
-    List<Invoice> selectByOrderId(Long orderId);
+    Invoice selectById(Long invoiceId, Long shopId);
+    List<Invoice> selectAll(Long shopId);
+    List<Invoice> selectByOrderId(Long orderId, Long shopId);
 }

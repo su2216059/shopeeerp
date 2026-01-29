@@ -19,7 +19,7 @@ public interface InvoiceMapper {
     /**
      * 根据ID删除发票记录
      */
-    int deleteById(Long invoiceId);
+    int deleteById(@Param("invoiceId") Long invoiceId, @Param("shopId") Long shopId);
 
     /**
      * 更新发票记录
@@ -29,15 +29,15 @@ public interface InvoiceMapper {
     /**
      * 根据ID查询发票记录
      */
-    Invoice selectById(Long invoiceId);
+    Invoice selectById(@Param("invoiceId") Long invoiceId, @Param("shopId") Long shopId);
 
     /**
      * 查询所有发票记录
      */
-    List<Invoice> selectAll();
+    List<Invoice> selectAll(@Param("shopId") Long shopId);
 
     /**
      * 根据订单ID查询发票记录
      */
-    List<Invoice> selectByOrderId(@Param("orderId") Long orderId);
+    List<Invoice> selectByOrderId(@Param("orderId") Long orderId, @Param("shopId") Long shopId);
 }

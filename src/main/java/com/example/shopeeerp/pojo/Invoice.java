@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
  */
 public class Invoice {
     private Long invoiceId;
+    private Long shopId;
     private Long orderId;
     private String invoiceNumber;
     private LocalDateTime issueDate;
@@ -22,6 +23,14 @@ public class Invoice {
 
     public void setInvoiceId(Long invoiceId) {
         this.invoiceId = invoiceId;
+    }
+
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
     }
 
     public Long getOrderId() {

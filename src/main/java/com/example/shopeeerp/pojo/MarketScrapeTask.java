@@ -16,6 +16,7 @@ public class MarketScrapeTask {
     private Integer maxRetries;
     private String lastError;
     private String payloadJson;
+    private String progressJson;
     private String lockOwner;
     private LocalDateTime lockAt;
     private LocalDateTime createdAt;
@@ -123,6 +124,14 @@ public class MarketScrapeTask {
 
     public void setPayloadJson(String payloadJson) {
         this.payloadJson = payloadJson;
+    }
+
+    public String getProgressJson() {
+        return progressJson;
+    }
+
+    public void setProgressJson(String progressJson) {
+        this.progressJson = progressJson;
     }
 
     public String getLockOwner() {

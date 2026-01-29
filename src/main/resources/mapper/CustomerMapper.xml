@@ -4,6 +4,7 @@
 
     <resultMap id="BaseResultMap" type="com.example.shopeeerp.pojo.Customer">
         <id column="customer_id" property="customerId" jdbcType="BIGINT"/>
+        <result column="shop_id" property="shopId" jdbcType="BIGINT"/>
         <result column="first_name" property="firstName" jdbcType="VARCHAR"/>
         <result column="last_name" property="lastName" jdbcType="VARCHAR"/>
         <result column="email" property="email" jdbcType="VARCHAR"/>
@@ -14,16 +15,16 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        customer_id, first_name, last_name, email, phone, address, created_at, updated_at
+        customer_id, shop_id, first_name, last_name, email, phone, address, created_at, updated_at
     </sql>
 
     <insert id="insert" parameterType="com.example.shopeeerp.pojo.Customer" useGeneratedKeys="true" keyProperty="customerId">
-        INSERT INTO customers (first_name, last_name, email, phone, address, created_at, updated_at)
-        VALUES (#{firstName}, #{lastName}, #{email}, #{phone}, #{address}, #{createdAt}, #{updatedAt})
+        INSERT INTO customers (shop_id, first_name, last_name, email, phone, address, created_at, updated_at)
+        VALUES (#{shopId}, #{firstName}, #{lastName}, #{email}, #{phone}, #{address}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <delete id="deleteById" parameterType="java.lang.Long">
-        DELETE FROM customers WHERE customer_id = #{customerId}
+    <delete id="deleteById" parameterType="map">
+        DELETE FROM customers WHERE customer_id = #{customerId} AND shop_id = #{shopId}
     </delete>
 
     <update id="update" parameterType="com.example.shopeeerp.pojo.Customer">
@@ -34,24 +35,25 @@
             phone = #{phone},
             address = #{address},
             updated_at = #{updatedAt}
-        WHERE customer_id = #{customerId}
+        WHERE customer_id = #{customerId} AND shop_id = #{shopId}
     </update>
 
-    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    <select id="selectById" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM customers
-        WHERE customer_id = #{customerId}
+        WHERE customer_id = #{customerId} AND shop_id = #{shopId}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM customers
+        WHERE shop_id = #{shopId}
     </select>
 
-    <select id="selectByEmail" parameterType="java.lang.String" resultMap="BaseResultMap">
+    <select id="selectByEmail" parameterType="map" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM customers
-        WHERE email = #{email}
+        WHERE email = #{email} AND shop_id = #{shopId}
     </select>
 
 </mapper>
