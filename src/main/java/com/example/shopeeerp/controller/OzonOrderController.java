@@ -15,6 +15,7 @@ import com.example.shopeeerp.service.OzonProfitOperationService;
 import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
 import com.example.shopeeerp.security.ShopPermission;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/ozon/orders")
 @CrossOrigin(origins = "*")
+@Slf4j
 public class OzonOrderController {
 
     private final OzonPostingService ozonPostingService;
@@ -79,20 +81,29 @@ public class OzonOrderController {
             @RequestParam(value = "created_from", required = false) String createdFrom,
             @RequestParam(value = "created_to", required = false) String createdTo,
             @RequestParam(value = "status", required = false) String status) {
-        LocalDateTime from = parseDateTime(createdFrom);
-        LocalDateTime to = parseDateTime(createdTo);
-        String statusFilter = status != null ? status.trim() : null;
+        log.info("??Ozon????: shopId={}, createdFrom={}, createdTo={}, status={}", shopId, createdFrom, createdTo, status);
+        try {
+            LocalDateTime from = parseDateTime(createdFrom);
+            LocalDateTime to = parseDateTime(createdTo);
+            String statusFilter = status != null ? status.trim() : null;
 
-        List<OzonPosting> postings = ozonPostingService.getAllByShopId(shopId);
-        List<OzonPosting> filtered = postings.stream()
-                .filter(p -> matchesCreatedTime(p, from, to))
-                .filter(p -> statusFilter == null || statusFilter.isEmpty() || statusFilter.equalsIgnoreCase(p.getStatus()))
-                .collect(Collectors.toList());
-        Map<String, List<OzonProfitOperation>> profitMap = loadProfitOperations(filtered);
-        List<OzonPostingView> result = filtered.stream()
-                .map(p -> buildView(p, profitMap.get(p.getPostingNumber()), shopId))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(result);
+            List<OzonPosting> postings = ozonPostingService.getAllByShopId(shopId);
+            List<OzonPosting> filtered = postings.stream()
+                    .filter(p -> matchesCreatedTime(p, from, to))
+                    .filter(p -> statusFilter == null || statusFilter.isEmpty() || statusFilter.equalsIgnoreCase(p.getStatus()))
+                    .collect(Collectors.toList());
+            Map<String, List<OzonProfitOperation>> profitMap = loadProfitOperations(filtered);
+            List<OzonPostingView> result = filtered.stream()
+                    .map(p -> buildView(p, profitMap.get(p.getPostingNumber()), shopId))
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("??Ozon??????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??Ozon??????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     @PutMapping("/{postingNumber}/purchase-amount")
@@ -102,28 +113,37 @@ public class OzonOrderController {
             @PathVariable("postingNumber") String postingNumber,
             @RequestParam("shopId") Long shopId,
             @RequestBody(required = false) PurchaseAmountRequest request) {
+        log.info("??????: shopId={}, postingNumber={}", shopId, postingNumber);
         Map<String, Object> resp = new HashMap<>();
-        if (postingNumber == null || postingNumber.trim().isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "posting_number is required");
-            return ResponseEntity.badRequest().body(resp);
+        try {
+            if (postingNumber == null || postingNumber.trim().isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "posting_number is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
+            OzonPosting existing = ozonPostingService.getByPostingNumberAndShopId(postingNumber, shopId);
+            if (existing == null) {
+                resp.put("success", false);
+                resp.put("message", "posting_number not found");
+                return ResponseEntity.status(404).body(resp);
+            }
+            BigDecimal amount = request != null ? request.getPurchaseAmount() : null;
+            boolean updated = ozonPostingService.updatePurchaseAmount(postingNumber, shopId, amount);
+            if (!updated) {
+                resp.put("success", false);
+                resp.put("message", "update failed");
+                return ResponseEntity.internalServerError().body(resp);
+            }
+            resp.put("success", true);
+            resp.put("message", "ok");
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: postingNumber={}, ??={}", postingNumber, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: postingNumber={}", postingNumber, e);
+            throw e;
         }
-        OzonPosting existing = ozonPostingService.getByPostingNumberAndShopId(postingNumber, shopId);
-        if (existing == null) {
-            resp.put("success", false);
-            resp.put("message", "posting_number not found");
-            return ResponseEntity.status(404).body(resp);
-        }
-        BigDecimal amount = request != null ? request.getPurchaseAmount() : null;
-        boolean updated = ozonPostingService.updatePurchaseAmount(postingNumber, shopId, amount);
-        if (!updated) {
-            resp.put("success", false);
-            resp.put("message", "update failed");
-            return ResponseEntity.internalServerError().body(resp);
-        }
-        resp.put("success", true);
-        resp.put("message", "ok");
-        return ResponseEntity.ok(resp);
     }
 
     @GetMapping("/sync")
@@ -133,14 +153,15 @@ public class OzonOrderController {
             @RequestParam("shopId") Long shopId,
             @RequestParam(value = "start", required = false) String start,
             @RequestParam(value = "end", required = false) String end) {
+        log.info("??Ozon??: shopId={}, start={}, end={}", shopId, start, end);
         Map<String, Object> result = new HashMap<>();
-        if (!syncing.compareAndSet(false, true)) {
-            result.put("success", false);
-            result.put("message", "同步进行中，请稍后再试");
-            return ResponseEntity.status(429).body(result);
-        }
-
         try {
+            if (!syncing.compareAndSet(false, true)) {
+                result.put("success", false);
+                result.put("message", "???????????");
+                return ResponseEntity.status(429).body(result);
+            }
+
             PlatformAdapter adapter = platformAdapterFactory.getAdapter("ozon");
             if (!(adapter instanceof OzonAdapter)) {
                 result.put("success", false);
@@ -149,24 +170,28 @@ public class OzonOrderController {
                 return ResponseEntity.internalServerError().body(result);
             }
             OzonAdapter ozonAdapter = (OzonAdapter) adapter;
+
             CompletableFuture.runAsync(() -> {
                 try {
                     performSync(ozonAdapter, shopId, start, end);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Ozon order sync failed: shopId={}", shopId, e);
                 } finally {
                     syncing.set(false);
                 }
             }, syncExecutor);
 
             result.put("success", true);
-            result.put("message", "同步任务已启动，请稍后刷新列表");
-            return ResponseEntity.accepted().body(result);
+            result.put("message", "sync started");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            syncing.set(false);
+            log.warn("Ozon order sync invalid params: shopId={}, reason={}", shopId, e.getMessage());
+            throw e;
         } catch (Exception e) {
             syncing.set(false);
-            result.put("success", false);
-            result.put("message", "Sync failed to start");
-            return ResponseEntity.internalServerError().body(result);
+            log.error("Ozon order sync error: shopId={}", shopId, e);
+            throw e;
         }
     }
 

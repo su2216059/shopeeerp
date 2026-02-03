@@ -9,6 +9,7 @@ import com.example.shopeeerp.security.SecurityUtil;
 import com.example.shopeeerp.service.ShopService;
 import com.example.shopeeerp.service.UserShopService;
 import com.example.shopeeerp.util.CryptoUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/shops")
 @CrossOrigin
+@Slf4j
 public class ShopController {
 
     @Autowired
@@ -44,7 +46,16 @@ public class ShopController {
     @GetMapping
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<List<Shop>> getAllShops() {
-        return ResponseEntity.ok(shopService.getAllShops());
+        log.info("获取店铺列表");
+        try {
+            return ResponseEntity.ok(shopService.getAllShops());
+        } catch (IllegalArgumentException e) {
+            log.warn("获取店铺列表失败: 原因={}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("获取店铺列表异常", e);
+            throw e;
+        }
     }
 
     /**
@@ -54,11 +65,20 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     @ShopPermission(param = "id")
     public ResponseEntity<Shop> getShop(@PathVariable Long id) {
-        Shop shop = shopService.getShopById(id);
-        if (shop == null) {
-            return ResponseEntity.notFound().build();
+        log.info("获取店铺详情: shopId={}", id);
+        try {
+            Shop shop = shopService.getShopById(id);
+            if (shop == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(shop);
+        } catch (IllegalArgumentException e) {
+            log.warn("获取店铺详情失败: shopId={}, 原因={}", id, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("获取店铺详情异常: shopId={}", id, e);
+            throw e;
         }
-        return ResponseEntity.ok(shop);
     }
 
     /**
@@ -67,11 +87,23 @@ public class ShopController {
     @PostMapping
     @PreAuthorize("hasAuthority('SHOP_CREATE')")
     public ResponseEntity<Shop> createShop(@RequestBody Shop shop) {
-        if (shop.getOwnerUserId() == null) {
-            shop.setOwnerUserId(SecurityUtil.getCurrentUserId());
+        log.info("创建店铺: shopCode={}, platform={}, ownerUserId={}",
+                shop != null ? shop.getShopCode() : null,
+                shop != null ? shop.getPlatform() : null,
+                shop != null ? shop.getOwnerUserId() : null);
+        try {
+            if (shop.getOwnerUserId() == null) {
+                shop.setOwnerUserId(SecurityUtil.getCurrentUserId());
+            }
+            Shop created = shopService.createShop(shop);
+            return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            log.warn("创建店铺失败: shopCode={}, 原因={}", shop != null ? shop.getShopCode() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("创建店铺异常: shopCode={}", shop != null ? shop.getShopCode() : null, e);
+            throw e;
         }
-        Shop created = shopService.createShop(shop);
-        return ResponseEntity.ok(created);
     }
 
     /**
@@ -81,9 +113,18 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_UPDATE')")
     @ShopPermission(param = "id")
     public ResponseEntity<Shop> updateShop(@PathVariable Long id, @RequestBody Shop shop) {
-        shop.setId(id);
-        Shop updated = shopService.updateShop(shop);
-        return ResponseEntity.ok(updated);
+        log.info("更新店铺: shopId={}", id);
+        try {
+            shop.setId(id);
+            Shop updated = shopService.updateShop(shop);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            log.warn("更新店铺失败: shopId={}, 原因={}", id, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("更新店铺异常: shopId={}", id, e);
+            throw e;
+        }
     }
 
     /**
@@ -93,8 +134,17 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_DELETE')")
     @ShopPermission(param = "id")
     public ResponseEntity<Void> deleteShop(@PathVariable Long id) {
-        shopService.deleteShop(id);
-        return ResponseEntity.ok().build();
+        log.info("删除店铺: shopId={}", id);
+        try {
+            shopService.deleteShop(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("删除店铺失败: shopId={}, 原因={}", id, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("删除店铺异常: shopId={}", id, e);
+            throw e;
+        }
     }
 
     /**
@@ -103,11 +153,20 @@ public class ShopController {
     @GetMapping("/default")
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<Shop> getDefaultShop() {
-        Shop shop = shopService.getDefaultShop();
-        if (shop == null) {
-            return ResponseEntity.notFound().build();
+        log.info("获取默认店铺");
+        try {
+            Shop shop = shopService.getDefaultShop();
+            if (shop == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(shop);
+        } catch (IllegalArgumentException e) {
+            log.warn("获取默认店铺失败: 原因={}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("获取默认店铺异常", e);
+            throw e;
         }
-        return ResponseEntity.ok(shop);
     }
 
     /**
@@ -116,7 +175,16 @@ public class ShopController {
     @GetMapping("/platform/{platform}")
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<List<Shop>> getShopsByPlatform(@PathVariable String platform) {
-        return ResponseEntity.ok(shopService.getShopsByPlatform(platform));
+        log.info("按平台获取店铺: platform={}", platform);
+        try {
+            return ResponseEntity.ok(shopService.getShopsByPlatform(platform));
+        } catch (IllegalArgumentException e) {
+            log.warn("按平台获取店铺失败: platform={}, 原因={}", platform, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("按平台获取店铺异常: platform={}", platform, e);
+            throw e;
+        }
     }
 
     // ========== API凭证管理 ==========
@@ -128,24 +196,33 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_CREDENTIAL')")
     @ShopPermission
     public ResponseEntity<Map<String, Object>> getCredential(@PathVariable Long shopId) {
-        ShopCredential credential = shopService.getCredential(shopId);
-        if (credential == null) {
-            return ResponseEntity.notFound().build();
+        log.info("??????: shopId={}", shopId);
+        try {
+            ShopCredential credential = shopService.getCredential(shopId);
+            if (credential == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // ??????
+            Map<String, Object> result = new HashMap<>();
+            result.put("shopId", credential.getShopId());
+            result.put("clientId", credential.getClientId());
+            result.put("apiKey", CryptoUtil.mask(credential.getApiKey()));
+            result.put("credentialType", credential.getCredentialType());
+            result.put("status", credential.getStatus());
+            result.put("lastUsedAt", credential.getLastUsedAt());
+            result.put("lastVerifiedAt", credential.getLastVerifiedAt());
+            result.put("rateLimitPerMinute", credential.getRateLimitPerMinute());
+            result.put("rateLimitPerDay", credential.getRateLimitPerDay());
+
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: shopId={}", shopId, e);
+            throw e;
         }
-
-        // 掩码敏感信息
-        Map<String, Object> result = new HashMap<>();
-        result.put("shopId", credential.getShopId());
-        result.put("clientId", credential.getClientId());
-        result.put("apiKey", CryptoUtil.mask(credential.getApiKey()));
-        result.put("credentialType", credential.getCredentialType());
-        result.put("status", credential.getStatus());
-        result.put("lastUsedAt", credential.getLastUsedAt());
-        result.put("lastVerifiedAt", credential.getLastVerifiedAt());
-        result.put("rateLimitPerMinute", credential.getRateLimitPerMinute());
-        result.put("rateLimitPerDay", credential.getRateLimitPerDay());
-
-        return ResponseEntity.ok(result);
     }
 
     /**
@@ -157,21 +234,30 @@ public class ShopController {
     public ResponseEntity<Map<String, Object>> saveCredential(
             @PathVariable Long shopId,
             @RequestBody CredentialRequest request) {
-        
-        ShopCredential credential = shopService.saveCredential(
-                shopId,
-                request.getClientId(),
-                request.getApiKey(),
-                request.getApiSecret()
-        );
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("shopId", shopId);
-        result.put("clientId", credential.getClientId());
-        result.put("message", "Credential saved successfully");
+        log.info("??????: shopId={}, hasClientId={}", shopId, request != null && request.getClientId() != null);
+        try {
+            ShopCredential credential = shopService.saveCredential(
+                    shopId,
+                    request.getClientId(),
+                    request.getApiKey(),
+                    request.getApiSecret()
+            );
 
-        return ResponseEntity.ok(result);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("shopId", shopId);
+            result.put("clientId", credential.getClientId());
+            result.put("message", "Credential saved successfully");
+
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     /**
@@ -181,14 +267,23 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_CREDENTIAL')")
     @ShopPermission
     public ResponseEntity<Map<String, Object>> verifyCredential(@PathVariable Long shopId) {
-        boolean valid = shopService.verifyCredential(shopId);
+        log.info("??????: shopId={}", shopId);
+        try {
+            boolean valid = shopService.verifyCredential(shopId);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("shopId", shopId);
-        result.put("valid", valid);
-        result.put("message", valid ? "Credential is valid" : "Credential verification failed");
+            Map<String, Object> result = new HashMap<>();
+            result.put("shopId", shopId);
+            result.put("valid", valid);
+            result.put("message", valid ? "Credential is valid" : "Credential verification failed");
 
-        return ResponseEntity.ok(result);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     // ========== 登录账号管理 ==========
@@ -200,23 +295,32 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_ACCOUNT')")
     @ShopPermission
     public ResponseEntity<List<Map<String, Object>>> getAccounts(@PathVariable Long shopId) {
-        List<ShopAccount> accounts = shopService.getAccountsByShopId(shopId);
-        
-        // 不返回密码
-        List<Map<String, Object>> result = accounts.stream().map(acc -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", acc.getId());
-            map.put("shopId", acc.getShopId());
-            map.put("accountType", acc.getAccountType());
-            map.put("accountName", acc.getAccountName());
-            map.put("username", acc.getUsername());
-            map.put("status", acc.getStatus());
-            map.put("lastLoginAt", acc.getLastLoginAt());
-            map.put("remark", acc.getRemark());
-            return map;
-        }).collect(Collectors.toList());
+        log.info("????????: shopId={}", shopId);
+        try {
+            List<ShopAccount> accounts = shopService.getAccountsByShopId(shopId);
 
-        return ResponseEntity.ok(result);
+            // ?????
+            List<Map<String, Object>> result = accounts.stream().map(acc -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", acc.getId());
+                map.put("shopId", acc.getShopId());
+                map.put("accountType", acc.getAccountType());
+                map.put("accountName", acc.getAccountName());
+                map.put("username", acc.getUsername());
+                map.put("status", acc.getStatus());
+                map.put("lastLoginAt", acc.getLastLoginAt());
+                map.put("remark", acc.getRemark());
+                return map;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("??????????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??????????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     /**
@@ -228,12 +332,24 @@ public class ShopController {
     public ResponseEntity<ShopAccount> addAccount(
             @PathVariable Long shopId,
             @RequestBody ShopAccount account) {
-        
-        ShopAccount created = shopService.addAccount(shopId, account);
-        // 清除密码后返回
-        created.setPassword(null);
-        created.setPasswordEncrypted(null);
-        return ResponseEntity.ok(created);
+
+        log.info("??????: shopId={}, accountType={}, username={}",
+                shopId,
+                account != null ? account.getAccountType() : null,
+                account != null ? account.getUsername() : null);
+        try {
+            ShopAccount created = shopService.addAccount(shopId, account);
+            // ???????
+            created.setPassword(null);
+            created.setPasswordEncrypted(null);
+            return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     /**
@@ -246,14 +362,23 @@ public class ShopController {
             @PathVariable Long shopId,
             @PathVariable Long accountId,
             @RequestBody ShopAccount account) {
-        
-        account.setId(accountId);
-        account.setShopId(shopId);
-        ShopAccount updated = shopService.updateAccount(account);
-        // 清除密码后返回
-        updated.setPassword(null);
-        updated.setPasswordEncrypted(null);
-        return ResponseEntity.ok(updated);
+
+        log.info("??????: shopId={}, accountId={}", shopId, accountId);
+        try {
+            account.setId(accountId);
+            account.setShopId(shopId);
+            ShopAccount updated = shopService.updateAccount(account);
+            // ???????
+            updated.setPassword(null);
+            updated.setPasswordEncrypted(null);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: shopId={}, accountId={}, ??={}", shopId, accountId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: shopId={}, accountId={}", shopId, accountId, e);
+            throw e;
+        }
     }
 
     /**
@@ -265,9 +390,18 @@ public class ShopController {
     public ResponseEntity<Void> deleteAccount(
             @PathVariable Long shopId,
             @PathVariable Long accountId) {
-        
-        shopService.deleteAccount(accountId);
-        return ResponseEntity.ok().build();
+
+        log.info("??????: shopId={}, accountId={}", shopId, accountId);
+        try {
+            shopService.deleteAccount(accountId);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: shopId={}, accountId={}, ??={}", shopId, accountId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: shopId={}, accountId={}", shopId, accountId, e);
+            throw e;
+        }
     }
 
     /**
@@ -279,12 +413,21 @@ public class ShopController {
     public ResponseEntity<ShopAccount> getAccountDetail(
             @PathVariable Long shopId,
             @PathVariable Long accountId) {
-        
-        ShopAccount account = shopService.getAccountById(accountId);
-        if (account == null || !account.getShopId().equals(shopId)) {
-            return ResponseEntity.notFound().build();
+
+        log.info("????????: shopId={}, accountId={}", shopId, accountId);
+        try {
+            ShopAccount account = shopService.getAccountById(accountId);
+            if (account == null || !account.getShopId().equals(shopId)) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(account);
+        } catch (IllegalArgumentException e) {
+            log.warn("??????????: shopId={}, accountId={}, ??={}", shopId, accountId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??????????: shopId={}, accountId={}", shopId, accountId, e);
+            throw e;
         }
-        return ResponseEntity.ok(account);
     }
 
     // ========== 店铺切换 ==========
@@ -296,15 +439,24 @@ public class ShopController {
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     @ShopPermission
     public ResponseEntity<Map<String, Object>> switchShop(@PathVariable Long shopId) {
-        shopService.switchShop(shopId);
-        Shop shop = shopService.getCurrentShop();
+        log.info("????: shopId={}", shopId);
+        try {
+            shopService.switchShop(shopId);
+            Shop shop = shopService.getCurrentShop();
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("currentShop", shop);
-        result.put("message", "Switched to shop: " + shop.getShopName());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("currentShop", shop);
+            result.put("message", "Switched to shop: " + shop.getShopName());
 
-        return ResponseEntity.ok(result);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("??????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     /**
@@ -313,11 +465,20 @@ public class ShopController {
     @GetMapping("/current")
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<Shop> getCurrentShop() {
-        Shop shop = shopService.getCurrentShop();
-        if (shop == null) {
-            return ResponseEntity.notFound().build();
+        log.info("??????");
+        try {
+            Shop shop = shopService.getCurrentShop();
+            if (shop == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(shop);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: ??={}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????", e);
+            throw e;
         }
-        return ResponseEntity.ok(shop);
     }
 
     /**
@@ -326,63 +487,77 @@ public class ShopController {
     @PostMapping("/bind")
     @PreAuthorize("hasAuthority('SHOP_VIEW')")
     public ResponseEntity<Map<String, Object>> bindShop(@RequestBody BindShopRequest request) {
+        log.info("????: shopId={}, shopCode={}, platform={}, market={}, hasClientId={}",
+                request != null ? request.getShopId() : null,
+                request != null ? request.getShopCode() : null,
+                request != null ? request.getPlatform() : null,
+                request != null ? request.getMarket() : null,
+                request != null && request.getClientId() != null);
         Map<String, Object> result = new HashMap<>();
 
-        Long userId = SecurityUtil.getCurrentUserId();
-        if (userId == null) {
-            result.put("success", false);
-            result.put("message", "Unauthorized");
-            return ResponseEntity.status(401).body(result);
-        }
-
-        if (request.getClientId() == null || request.getClientId().trim().isEmpty()) {
-            result.put("success", false);
-            result.put("message", "clientId is required");
-            return ResponseEntity.badRequest().body(result);
-        }
-        if (request.getApiKey() == null || request.getApiKey().trim().isEmpty()) {
-            result.put("success", false);
-            result.put("message", "apiKey is required");
-            return ResponseEntity.badRequest().body(result);
-        }
-
-        Shop shop = null;
-        if (request.getShopId() != null) {
-            shop = shopMapper.selectById(request.getShopId());
-        } else if (request.getShopCode() != null && !request.getShopCode().trim().isEmpty()) {
-            shop = shopMapper.selectByCode(request.getShopCode().trim());
-        }
-
-        if (shop == null) {
-            if (request.getShopCode() == null || request.getShopCode().trim().isEmpty()) {
+        try {
+            Long userId = SecurityUtil.getCurrentUserId();
+            if (userId == null) {
                 result.put("success", false);
-                result.put("message", "shopCode is required");
+                result.put("message", "Unauthorized");
+                return ResponseEntity.status(401).body(result);
+            }
+
+            if (request.getClientId() == null || request.getClientId().trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "clientId is required");
                 return ResponseEntity.badRequest().body(result);
             }
-            Shop create = new Shop();
-            create.setShopCode(request.getShopCode().trim());
-            create.setShopName(request.getShopName() == null || request.getShopName().trim().isEmpty()
-                    ? request.getShopCode().trim()
-                    : request.getShopName().trim());
-            create.setPlatform(request.getPlatform() == null ? "ozon" : request.getPlatform());
-            create.setMarket(request.getMarket() == null ? "RU" : request.getMarket());
-            create.setOwnerUserId(userId);
-            shop = shopService.createShop(create);
-        } else if (!SecurityUtil.isAdmin() && !userShopService.hasShopAccess(userId, shop.getId())) {
-            userShopService.addUserShop(userId, shop.getId(), "owner");
+            if (request.getApiKey() == null || request.getApiKey().trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "apiKey is required");
+                return ResponseEntity.badRequest().body(result);
+            }
+
+            Shop shop = null;
+            if (request.getShopId() != null) {
+                shop = shopMapper.selectById(request.getShopId());
+            } else if (request.getShopCode() != null && !request.getShopCode().trim().isEmpty()) {
+                shop = shopMapper.selectByCode(request.getShopCode().trim());
+            }
+
+            if (shop == null) {
+                if (request.getShopCode() == null || request.getShopCode().trim().isEmpty()) {
+                    result.put("success", false);
+                    result.put("message", "shopCode is required");
+                    return ResponseEntity.badRequest().body(result);
+                }
+                Shop create = new Shop();
+                create.setShopCode(request.getShopCode().trim());
+                create.setShopName(request.getShopName() == null || request.getShopName().trim().isEmpty()
+                        ? request.getShopCode().trim()
+                        : request.getShopName().trim());
+                create.setPlatform(request.getPlatform() == null ? "ozon" : request.getPlatform());
+                create.setMarket(request.getMarket() == null ? "RU" : request.getMarket());
+                create.setOwnerUserId(userId);
+                shop = shopService.createShop(create);
+            } else if (!SecurityUtil.isAdmin() && !userShopService.hasShopAccess(userId, shop.getId())) {
+                userShopService.addUserShop(userId, shop.getId(), "owner");
+            }
+
+            shopService.saveCredential(shop.getId(),
+                    request.getClientId().trim(),
+                    request.getApiKey().trim(),
+                    request.getApiSecret());
+
+            result.put("success", true);
+            result.put("shopId", shop.getId());
+            result.put("shopCode", shop.getShopCode());
+            result.put("message", "Shop bound");
+
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("??????: shopCode={}, ??={}", request != null ? request.getShopCode() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??????: shopCode={}", request != null ? request.getShopCode() : null, e);
+            throw e;
         }
-
-        shopService.saveCredential(shop.getId(),
-                request.getClientId().trim(),
-                request.getApiKey().trim(),
-                request.getApiSecret());
-
-        result.put("success", true);
-        result.put("shopId", shop.getId());
-        result.put("shopCode", shop.getShopCode());
-        result.put("message", "Shop bound");
-
-        return ResponseEntity.ok(result);
     }
     // ========== Request Classes ==========
 

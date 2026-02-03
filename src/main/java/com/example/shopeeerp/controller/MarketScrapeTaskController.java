@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.MarketScrapeTask;
 import com.example.shopeeerp.service.MarketScrapeTaskService;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -24,6 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/market/tasks")
 @CrossOrigin(origins = "*")
+@Slf4j
 public class MarketScrapeTaskController {
 
     @Autowired
@@ -31,128 +33,190 @@ public class MarketScrapeTaskController {
 
     @PostMapping("/enqueue")
     public ResponseEntity<Map<String, Object>> enqueue(@RequestBody(required = false) List<TaskRequest> requests) {
+        log.info("??????: count={}", requests != null ? requests.size() : 0);
         Map<String, Object> resp = new HashMap<>();
-        if (requests == null || requests.isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "payload is required");
-            return ResponseEntity.badRequest().body(resp);
-        }
-        List<MarketScrapeTask> tasks = new ArrayList<>();
-        for (TaskRequest request : requests) {
-            MarketScrapeTask task = request != null ? request.toTask() : null;
-            if (task != null) {
-                tasks.add(task);
+        try {
+            if (requests == null || requests.isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "payload is required");
+                return ResponseEntity.badRequest().body(resp);
             }
+            List<MarketScrapeTask> tasks = new ArrayList<>();
+            for (TaskRequest request : requests) {
+                MarketScrapeTask task = request != null ? request.toTask() : null;
+                if (task != null) {
+                    tasks.add(task);
+                }
+            }
+            boolean saved = taskService.enqueue(tasks);
+            resp.put("success", saved);
+            resp.put("count", tasks.size());
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: ??={}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????", e);
+            throw e;
         }
-        boolean saved = taskService.enqueue(tasks);
-        resp.put("success", saved);
-        resp.put("count", tasks.size());
-        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/pull")
     public ResponseEntity<Map<String, Object>> pull(@RequestBody(required = false) TaskPullRequest request) {
+        log.info("??????: workerId={}, limit={}",
+                request != null ? request.getWorkerId() : null,
+                request != null ? request.getLimit() : null);
         Map<String, Object> resp = new HashMap<>();
-        if (request == null || request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "workerId is required");
-            return ResponseEntity.badRequest().body(resp);
+        try {
+            if (request == null || request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "workerId is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
+            List<MarketScrapeTask> tasks = taskService.pull(request.getWorkerId(), request.getLimit());
+            resp.put("success", true);
+            resp.put("count", tasks.size());
+            resp.put("tasks", tasks);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: workerId={}, ??={}", request != null ? request.getWorkerId() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: workerId={}", request != null ? request.getWorkerId() : null, e);
+            throw e;
         }
-        List<MarketScrapeTask> tasks = taskService.pull(request.getWorkerId(), request.getLimit());
-        resp.put("success", true);
-        resp.put("count", tasks.size());
-        resp.put("tasks", tasks);
-        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/report")
     public ResponseEntity<Map<String, Object>> report(@RequestBody(required = false) TaskReportRequest request) {
+        log.info("??????: taskId={}, status={}",
+                request != null ? request.getTaskId() : null,
+                request != null ? request.getStatus() : null);
         Map<String, Object> resp = new HashMap<>();
-        if (request == null || request.getTaskId() == null) {
-            resp.put("success", false);
-            resp.put("message", "taskId is required");
-            return ResponseEntity.badRequest().body(resp);
+        try {
+            if (request == null || request.getTaskId() == null) {
+                resp.put("success", false);
+                resp.put("message", "taskId is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
+            boolean ok;
+            if ("SUCCESS".equalsIgnoreCase(request.getStatus())) {
+                ok = taskService.reportSuccess(request.getTaskId(), parseDateTime(request.getFetchedAt()));
+            } else {
+                ok = taskService.reportFailure(request.getTaskId(), request.getErrorMessage());
+            }
+            resp.put("success", ok);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: taskId={}, ??={}", request != null ? request.getTaskId() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: taskId={}", request != null ? request.getTaskId() : null, e);
+            throw e;
         }
-        boolean ok;
-        if ("SUCCESS".equalsIgnoreCase(request.getStatus())) {
-            ok = taskService.reportSuccess(request.getTaskId(), parseDateTime(request.getFetchedAt()));
-        } else {
-            ok = taskService.reportFailure(request.getTaskId(), request.getErrorMessage());
-        }
-        resp.put("success", ok);
-        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/update")
     public ResponseEntity<Map<String, Object>> updateProgress(@RequestBody(required = false) TaskUpdateRequest request) {
+        log.info("????????: taskId={}, workerId={}",
+                request != null ? request.getTaskId() : null,
+                request != null ? request.getWorkerId() : null);
         Map<String, Object> resp = new HashMap<>();
-        if (request == null || request.getTaskId() == null) {
-            resp.put("success", false);
-            resp.put("message", "taskId is required");
-            return ResponseEntity.badRequest().body(resp);
-        }
-        if (request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "workerId is required");
-            return ResponseEntity.badRequest().body(resp);
-        }
-
-        // 将progress对象转换为JSON字符串
-        String progressJson = null;
-        if (request.getProgress() != null) {
-            try {
-                progressJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request.getProgress());
-            } catch (Exception e) {
+        try {
+            if (request == null || request.getTaskId() == null) {
                 resp.put("success", false);
-                resp.put("message", "Invalid progress data");
+                resp.put("message", "taskId is required");
                 return ResponseEntity.badRequest().body(resp);
             }
-        }
+            if (request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "workerId is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
 
-        boolean ok = taskService.updateProgress(request.getTaskId(), request.getWorkerId(), progressJson);
-        resp.put("success", ok);
-        return ResponseEntity.ok(resp);
+            String progressJson = null;
+            if (request.getProgress() != null) {
+                try {
+                    progressJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request.getProgress());
+                } catch (Exception e) {
+                    resp.put("success", false);
+                    resp.put("message", "Invalid progress data");
+                    return ResponseEntity.badRequest().body(resp);
+                }
+            }
+
+            boolean ok = taskService.updateProgress(request.getTaskId(), request.getWorkerId(), progressJson);
+            resp.put("success", ok);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("??????????: taskId={}, ??={}", request != null ? request.getTaskId() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??????????: taskId={}", request != null ? request.getTaskId() : null, e);
+            throw e;
+        }
     }
 
     @PostMapping("/complete")
     public ResponseEntity<Map<String, Object>> complete(@RequestBody(required = false) TaskCompleteRequest request) {
+        log.info("??????: taskId={}, workerId={}, status={}",
+                request != null ? request.getTaskId() : null,
+                request != null ? request.getWorkerId() : null,
+                request != null ? request.getStatus() : null);
         Map<String, Object> resp = new HashMap<>();
-        if (request == null || request.getTaskId() == null) {
-            resp.put("success", false);
-            resp.put("message", "taskId is required");
-            return ResponseEntity.badRequest().body(resp);
-        }
-        if (request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "workerId is required");
-            return ResponseEntity.badRequest().body(resp);
-        }
+        try {
+            if (request == null || request.getTaskId() == null) {
+                resp.put("success", false);
+                resp.put("message", "taskId is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
+            if (request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "workerId is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
 
-        boolean ok = taskService.completeTask(
-            request.getTaskId(),
-            request.getWorkerId(),
-            request.getStatus(),
-            request.getScrapedCount(),
-            request.getSavedCount(),
-            request.getSkippedCount(),
-            request.getErrorMessage()
-        );
-        resp.put("success", ok);
-        return ResponseEntity.ok(resp);
+            boolean ok = taskService.completeTask(
+                request.getTaskId(),
+                request.getWorkerId(),
+                request.getStatus(),
+                request.getScrapedCount(),
+                request.getSavedCount(),
+                request.getSkippedCount(),
+                request.getErrorMessage()
+            );
+            resp.put("success", ok);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("????????: taskId={}, ??={}", request != null ? request.getTaskId() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????????: taskId={}", request != null ? request.getTaskId() : null, e);
+            throw e;
+        }
     }
 
     @GetMapping("/list")
     public ResponseEntity<Map<String, Object>> list(
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) String status) {
+        log.info("????????: limit={}, status={}", limit, status);
         Map<String, Object> resp = new HashMap<>();
 
-        List<MarketScrapeTask> tasks = taskService.listTasks(limit, status);
-        resp.put("success", true);
-        resp.put("count", tasks.size());
-        resp.put("tasks", tasks);
+        try {
+            List<MarketScrapeTask> tasks = taskService.listTasks(limit, status);
+            resp.put("success", true);
+            resp.put("count", tasks.size());
+            resp.put("tasks", tasks);
 
-        return ResponseEntity.ok(resp);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("??????????: ??={}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??????????", e);
+            throw e;
+        }
     }
 
     private LocalDateTime parseDateTime(String value) {

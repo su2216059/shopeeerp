@@ -1,0 +1,35 @@
+2026-02-03 16:52:37.911 INFO  [main] c.e.s.ShopeeerpSysApplication - Starting ShopeeerpSysApplication using Java 1.8.0_471 on DESKTOP-RAQ8VOI with PID 33404 (D:\javaEverything\shopeeerp\target\classes started by su in D:\javaEverything\shopeeerp)
+2026-02-03 16:52:37.912 DEBUG [main] c.e.s.ShopeeerpSysApplication - Running with Spring Boot v2.7.18, Spring v5.3.31
+2026-02-03 16:52:37.913 INFO  [main] c.e.s.ShopeeerpSysApplication - The following 1 profile is active: "dev"
+2026-02-03 16:52:39.027 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JDBC repositories in DEFAULT mode.
+2026-02-03 16:52:39.054 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 23 ms. Found 0 JDBC repository interfaces.
+2026-02-03 16:52:39.748 INFO  [main] o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port(s): 8080 (http)
+2026-02-03 16:52:39.755 INFO  [main] o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-02-03 16:52:39.757 INFO  [main] o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-03 16:52:39.757 INFO  [main] o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-02-03 16:52:39.951 INFO  [main] o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-03 16:52:39.951 INFO  [main] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1992 ms
+2026-02-03 16:52:40.731 INFO  [main] o.s.b.web.servlet.RegistrationBean - Filter auditLogFilter was not registered (disabled)
+2026-02-03 16:52:40.750 DEBUG [main] c.e.s.s.JwtAuthenticationFilter - Filter 'jwtAuthenticationFilter' configured for use
+2026-02-03 16:52:40.884 INFO  [main] c.example.shopeeerp.util.CryptoUtil - CryptoUtil initialized
+2026-02-03 16:52:41.278 WARN  [main] o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 1588ce8a-3f49-43a0-8e92-3ff02a5579f4
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-02-03 16:52:41.424 INFO  [main] o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@4315fe1b, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@34e990cc, org.springframework.security.web.context.SecurityContextPersistenceFilter@2673487b, org.springframework.security.web.header.HeaderWriterFilter@16ccd2bc, org.springframework.web.filter.CorsFilter@2d5ae78e, org.springframework.security.web.authentication.logout.LogoutFilter@3d53e876, com.example.shopeeerp.security.JwtAuthenticationFilter@7197b07f, com.example.shopeeerp.security.AuditLogFilter@48cdb156, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@68a5aadd, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@1c2096c6, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@21f91efa, org.springframework.security.web.session.SessionManagementFilter@2fb48970, org.springframework.security.web.access.ExceptionTranslationFilter@6253e59a, org.springframework.security.web.access.intercept.AuthorizationFilter@63326a3a]
+2026-02-03 16:52:42.137 INFO  [main] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-02-03 16:52:42.311 INFO  [main] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-02-03 16:52:42.435 INFO  [main] o.s.b.a.e.web.EndpointLinksResolver - Exposing 4 endpoint(s) beneath base path '/actuator'
+2026-02-03 16:52:42.478 INFO  [main] o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-02-03 16:52:42.495 INFO  [main] o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port(s): 8080 (http) with context path ''
+2026-02-03 16:52:42.513 INFO  [main] c.e.s.ShopeeerpSysApplication - Started ShopeeerpSysApplication in 5.071 seconds (JVM running for 6.327)
+2026-02-03 16:52:43.427 INFO  [RMI TCP Connection(2)-192.168.5.67] o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-03 16:52:43.427 INFO  [RMI TCP Connection(2)-192.168.5.67] o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-02-03 16:52:43.429 INFO  [RMI TCP Connection(2)-192.168.5.67] o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-02-03 16:53:00.045 DEBUG [scheduling-1] c.e.s.m.M.markOfflineWorkers - ==>  Preparing: UPDATE market_scrape_worker SET status = 'offline', current_task_id = NULL, updated_at = ? WHERE last_heartbeat < ? AND status != 'offline'
+2026-02-03 16:53:00.061 DEBUG [scheduling-1] c.e.s.m.M.markOfflineWorkers - ==> Parameters: 2026-02-03T16:53:00.023(LocalDateTime), 2026-02-03T16:48:00.022(LocalDateTime)
+2026-02-03 16:53:00.085 DEBUG [scheduling-1] c.e.s.m.M.markOfflineWorkers - <==    Updates: 0
+2026-02-03 16:53:25.382 INFO  [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-02-03 16:53:25.389 INFO  [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.

@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import com.example.shopeeerp.security.JwtAuthenticationFilter;
 import com.example.shopeeerp.security.RestAccessDeniedHandler;
 import com.example.shopeeerp.security.RestAuthenticationEntryPoint;
+import com.example.shopeeerp.security.AuditLogFilter;
+import com.example.shopeeerp.service.AuditLogService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,7 +35,6 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
-
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             RestAuthenticationEntryPoint authenticationEntryPoint,
@@ -42,7 +45,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   AuditLogFilter auditLogFilter) throws Exception {
         http
             .cors().and()
             .csrf().disable()
@@ -51,6 +55,7 @@ public class SecurityConfig {
             .and()
             .authorizeHttpRequests(auth -> auth
                 .antMatchers("/api/auth/**").permitAll()
+                .antMatchers("/actuator/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .exceptionHandling()
@@ -58,8 +63,21 @@ public class SecurityConfig {
             .accessDeniedHandler(accessDeniedHandler);
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(auditLogFilter, JwtAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public AuditLogFilter auditLogFilter(AuditLogService auditLogService, ObjectMapper objectMapper) {
+        return new AuditLogFilter(auditLogService, objectMapper);
+    }
+
+    @Bean
+    public FilterRegistrationBean<AuditLogFilter> auditLogFilterRegistration(AuditLogFilter filter) {
+        FilterRegistrationBean<AuditLogFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean

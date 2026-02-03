@@ -11,6 +11,7 @@ import com.example.shopeeerp.service.OzonProductImageService;
 import com.example.shopeeerp.service.OzonProductService;
 import com.example.shopeeerp.service.OzonProductStatusService;
 import com.example.shopeeerp.service.OzonProductStockService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RestController
 @RequestMapping("/ozon/products")
 @CrossOrigin(origins = "*")
+@Slf4j
 public class OzonProductController {
 
     private final OzonProductService ozonProductService;
@@ -68,23 +70,32 @@ public class OzonProductController {
             @RequestParam(value = "created_from", required = false) String createdFrom,
             @RequestParam(value = "created_to", required = false) String createdTo,
             @RequestParam(value = "visibility", required = false) String visibility) {
-        LocalDateTime from = parseDateTime(createdFrom);
-        LocalDateTime to = parseDateTime(createdTo);
-        String titleFilter = normalizeFilter(title);
-        String codeFilter = normalizeFilter(productCode);
-        String visibilityFilter = normalizeVisibilityFilter(visibility);
-        List<OzonProduct> products = ozonProductService.getByFilters(
-                titleFilter,
-                shopId,
-                codeFilter,
-                from,
-                to,
-                visibilityFilter
-        );
-        List<OzonProductView> result = products.stream()
-                .map(this::buildView)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(result);
+        log.info("??Ozon????: shopId={}, title={}, productCode={}, visibility={}", shopId, title, productCode, visibility);
+        try {
+            LocalDateTime from = parseDateTime(createdFrom);
+            LocalDateTime to = parseDateTime(createdTo);
+            String titleFilter = normalizeFilter(title);
+            String codeFilter = normalizeFilter(productCode);
+            String visibilityFilter = normalizeVisibilityFilter(visibility);
+            List<OzonProduct> products = ozonProductService.getByFilters(
+                    titleFilter,
+                    shopId,
+                    codeFilter,
+                    from,
+                    to,
+                    visibilityFilter
+            );
+            List<OzonProductView> result = products.stream()
+                    .map(this::buildView)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("??Ozon??????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("??Ozon??????: shopId={}", shopId, e);
+            throw e;
+        }
     }
 
     /**
@@ -96,14 +107,15 @@ public class OzonProductController {
     public ResponseEntity<Map<String, Object>> syncProducts(
             @RequestParam("shopId") Long shopId,
             @RequestParam(value = "visibility", required = false) String visibility) {
+        log.info("??Ozon??: shopId={}, visibility={}", shopId, visibility);
         Map<String, Object> result = new HashMap<>();
-        if (!syncing.compareAndSet(false, true)) {
-            result.put("success", false);
-            result.put("message", "同步进行中，请稍后再试");
-            return ResponseEntity.status(429).body(result);
-        }
-
         try {
+            if (!syncing.compareAndSet(false, true)) {
+                result.put("success", false);
+                result.put("message", "???????????");
+                return ResponseEntity.status(429).body(result);
+            }
+
             PlatformAdapter adapter = platformAdapterFactory.getAdapter("ozon");
             CompletableFuture.runAsync(() -> {
                 try {
@@ -120,18 +132,16 @@ public class OzonProductController {
             }, syncExecutor);
 
             result.put("success", true);
-            result.put("message", "同步任务已启动，请稍后刷新列表");
+            result.put("message", "???????????????");
             return ResponseEntity.accepted().body(result);
         } catch (IllegalArgumentException e) {
             syncing.set(false);
-            result.put("success", false);
-            result.put("message", "Platform not found: ozon");
-            return ResponseEntity.badRequest().body(result);
+            log.warn("??Ozon????: shopId={}, ??={}", shopId, e.getMessage());
+            throw e;
         } catch (Exception e) {
             syncing.set(false);
-            result.put("success", false);
-            result.put("message", "Sync failed to start");
-            return ResponseEntity.internalServerError().body(result);
+            log.error("??Ozon????: shopId={}", shopId, e);
+            throw e;
         }
     }
 

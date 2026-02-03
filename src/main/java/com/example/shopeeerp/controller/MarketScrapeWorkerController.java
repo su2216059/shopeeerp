@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.MarketScrapeWorker;
 import com.example.shopeeerp.service.MarketScrapeWorkerService;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/market/workers")
 @CrossOrigin(origins = "*")
+@Slf4j
 public class MarketScrapeWorkerController {
 
     @Autowired
@@ -28,27 +30,39 @@ public class MarketScrapeWorkerController {
     public ResponseEntity<Map<String, Object>> register(
             @RequestBody(required = false) WorkerRegisterRequest request,
             HttpServletRequest httpRequest) {
+        log.info("Worker??: workerId={}, browserType={}, scriptVersion={}",
+                request != null ? request.getWorkerId() : null,
+                request != null ? request.getBrowserType() : null,
+                request != null ? request.getScriptVersion() : null);
         Map<String, Object> resp = new HashMap<>();
 
-        if (request == null || request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "worker_id is required");
-            return ResponseEntity.badRequest().body(resp);
+        try {
+            if (request == null || request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "worker_id is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
+
+            MarketScrapeWorker worker = new MarketScrapeWorker();
+            worker.setWorkerId(request.getWorkerId());
+            worker.setWorkerName(request.getWorkerName());
+            worker.setBrowserType(request.getBrowserType());
+            worker.setBrowserVersion(request.getBrowserVersion());
+            worker.setScriptVersion(request.getScriptVersion());
+            worker.setLastIp(getClientIp(httpRequest));
+
+            boolean success = workerService.registerWorker(worker);
+            resp.put("success", success);
+            resp.put("worker_id", request.getWorkerId());
+
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("Worker????: workerId={}, ??={}", request != null ? request.getWorkerId() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Worker????: workerId={}", request != null ? request.getWorkerId() : null, e);
+            throw e;
         }
-
-        MarketScrapeWorker worker = new MarketScrapeWorker();
-        worker.setWorkerId(request.getWorkerId());
-        worker.setWorkerName(request.getWorkerName());
-        worker.setBrowserType(request.getBrowserType());
-        worker.setBrowserVersion(request.getBrowserVersion());
-        worker.setScriptVersion(request.getScriptVersion());
-        worker.setLastIp(getClientIp(httpRequest));
-
-        boolean success = workerService.registerWorker(worker);
-        resp.put("success", success);
-        resp.put("worker_id", request.getWorkerId());
-
-        return ResponseEntity.ok(resp);
     }
 
     /**
@@ -57,18 +71,27 @@ public class MarketScrapeWorkerController {
     @PostMapping("/heartbeat")
     public ResponseEntity<Map<String, Object>> heartbeat(
             @RequestBody(required = false) WorkerHeartbeatRequest request) {
+        log.info("Worker??: workerId={}", request != null ? request.getWorkerId() : null);
         Map<String, Object> resp = new HashMap<>();
 
-        if (request == null || request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "worker_id is required");
-            return ResponseEntity.badRequest().body(resp);
+        try {
+            if (request == null || request.getWorkerId() == null || request.getWorkerId().trim().isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "worker_id is required");
+                return ResponseEntity.badRequest().body(resp);
+            }
+
+            boolean success = workerService.heartbeat(request.getWorkerId());
+            resp.put("success", success);
+
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("Worker????: workerId={}, ??={}", request != null ? request.getWorkerId() : null, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Worker????: workerId={}", request != null ? request.getWorkerId() : null, e);
+            throw e;
         }
-
-        boolean success = workerService.heartbeat(request.getWorkerId());
-        resp.put("success", success);
-
-        return ResponseEntity.ok(resp);
     }
 
     /**
@@ -76,14 +99,23 @@ public class MarketScrapeWorkerController {
      */
     @GetMapping("/list")
     public ResponseEntity<Map<String, Object>> list() {
+        log.info("????Worker??");
         Map<String, Object> resp = new HashMap<>();
 
-        List<MarketScrapeWorker> workers = workerService.getOnlineWorkers();
-        resp.put("success", true);
-        resp.put("count", workers.size());
-        resp.put("workers", workers);
+        try {
+            List<MarketScrapeWorker> workers = workerService.getOnlineWorkers();
+            resp.put("success", true);
+            resp.put("count", workers.size());
+            resp.put("workers", workers);
 
-        return ResponseEntity.ok(resp);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            log.warn("????Worker??: ??={}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("????Worker??", e);
+            throw e;
+        }
     }
 
     /**

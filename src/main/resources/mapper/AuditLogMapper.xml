@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.AuditLogMapper">
+    <insert id="insert" parameterType="com.example.shopeeerp.pojo.AuditLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO audit_log
+        (user_id, username, action, resource, method, path, request_id, ip, user_agent,
+         status, error_message, before_data, after_data, created_at)
+        VALUES
+        (#{userId}, #{username}, #{action}, #{resource}, #{method}, #{path}, #{requestId}, #{ip}, #{userAgent},
+         #{status}, #{errorMessage}, #{beforeData}, #{afterData}, #{createdAt})
+    </insert>
+</mapper>
