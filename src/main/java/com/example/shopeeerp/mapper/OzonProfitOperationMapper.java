@@ -4,6 +4,7 @@ import com.example.shopeeerp.pojo.OzonProfitOperation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,4 +20,6 @@ public interface OzonProfitOperationMapper {
     int deleteByDateRange(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     int deleteByPostingNumber(@Param("postingNumber") String postingNumber);
+
+    BigDecimal getPlatformFee(@Param("postingNumber")String orderId);
 }

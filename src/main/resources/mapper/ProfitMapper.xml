@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.shopeeerp.mapper.ProfitMapper">
+   <select id="summary" resultType="com.example.shopeeerp.adapter.dto.ozon.ProfitResultResponse" >
+       SELECT
+       COALESCE(SUM(revenue),0) AS revenue,
+       COALESCE(SUM(cost),0) AS cost,
+       COALESCE(SUM(platform_fee),0) AS platformFee,
+       COALESCE(SUM(profit),0) AS profit,
+       CASE WHEN COALESCE(SUM(revenue),0) = 0 THEN 0
+       ELSE COALESCE(SUM(profit),0) / COALESCE(SUM(revenue),0)
+       END AS profitRate
+       FROM profit_order
+       WHERE shop_id = #{q.shopId}
+       AND biz_date BETWEEN #{q.startDate} AND #{q.endDate}
+       <if test="q.sku != null and q.sku != ''">
+           AND sku = #{q.sku}
+       </if>
+   </select>
+    
+    
+    <insert id="upsertProfitOrder">
+        INSERT INTO profit_order
+            (shop_id, order_id, sku, revenue, cost, platform_fee, profit, profit_rate, currency, biz_date)
+        VALUES
+        (#{p.shopId}, #{p.orderId}, #{p.sku}, #{p.revenue}, #{p.cost}, #{p.platformFee},
+         #{p.profit}, #{p.profitRate}, #{p.currency}, #{p.bizDate})
+        ON DUPLICATE KEY UPDATE
+                             revenue=VALUES(revenue),
+                             cost=VALUES(cost),
+                             platform_fee=VALUES(platform_fee),
+                             profit=VALUES(profit),
+                             profit_rate=VALUES(profit_rate),
+                             currency=VALUES(currency),
+                             biz_date=VALUES(biz_date);
+    </insert>
+</mapper>

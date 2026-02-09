@@ -235,4 +235,14 @@
         </where>
     </select>
 
+
+    <select id="selectPurchasePrices" resultType="com.example.shopeeerp.pojo.SkuCostRow">
+        SELECT sku, purchase_price AS purchasePrice
+        FROM ozon_product
+        WHERE shop_id = #{shopId}
+        AND sku IN
+        <foreach collection="skus" item="s" open="(" separator="," close=")">
+            #{s}
+        </foreach>
+    </select>
 </mapper>

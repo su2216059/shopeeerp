@@ -1,6 +1,7 @@
 package com.example.shopeeerp.mapper;
 
 import com.example.shopeeerp.pojo.OzonProduct;
+import com.example.shopeeerp.pojo.SkuCostRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -82,4 +83,7 @@ public interface OzonProductMapper {
      * 根据条件统计商品数量
      */
     long countByCondition(OzonProduct condition);
+
+    List<SkuCostRow> selectPurchasePrices(@Param("shopId") Long shopId,
+                                          @Param("skus") List<Long> skus);
 }

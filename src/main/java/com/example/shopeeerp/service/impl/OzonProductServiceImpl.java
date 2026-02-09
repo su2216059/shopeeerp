@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -107,6 +108,12 @@ public class OzonProductServiceImpl implements OzonProductService {
     @Override
     public long countByCondition(OzonProduct condition) {
         return ozonProductMapper.countByCondition(condition);
+    }
+
+    @Override
+    public BigDecimal getPurchasePrice(Long shopId, String sku) {
+        OzonProduct ozonProduct = ozonProductMapper.selectBySku(Long.valueOf(sku), shopId);
+        return ozonProduct.getPurchasePrice();
     }
 }
 

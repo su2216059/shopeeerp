@@ -20,6 +20,7 @@ public class OzonProduct {
     private BigDecimal oldPrice;
     private String minPrice;
     private String vat;
+    private BigDecimal purchasePrice;
     private BigDecimal volumeWeight;
     private Integer discountedFboStocks;
     private Boolean isArchived;
@@ -31,6 +32,14 @@ public class OzonProduct {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime syncTime;
+
+    public BigDecimal getPurchasePrice() {
+        return purchasePrice;
+    }
+
+    public void setPurchasePrice(BigDecimal purchasePrice) {
+        this.purchasePrice = purchasePrice;
+    }
 
     // Getters and Setters
     public Long getId() {

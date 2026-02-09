@@ -2,6 +2,7 @@ package com.example.shopeeerp.service;
 
 import com.example.shopeeerp.pojo.OzonProduct;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -84,4 +85,14 @@ public interface OzonProductService {
      * 根据条件统计商品数量
      */
     long countByCondition(OzonProduct condition);
+
+    /*
+     * @author: 苏航
+     * @methodName: 根据条件获取商品采购价
+     * @Description:
+     * @param:
+     * @return:
+     * @throws
+     */
+    BigDecimal getPurchasePrice(Long shopId, String sku);
 }

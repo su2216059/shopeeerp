@@ -19,6 +19,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resp);
     }
 
+    @ExceptionHandler(BizException.class)
+    public ResponseEntity<ErrorResponse> handleBiz(BizException ex, HttpServletRequest request) {
+        log.warn("参数错误: {}", ex.getMessage(), ex);
+        ErrorResponse resp = new ErrorResponse(400, "参数错误: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(resp);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntime(RuntimeException ex, HttpServletRequest request) {
         log.error("运行时异常: {}", ex.getMessage(), ex);
