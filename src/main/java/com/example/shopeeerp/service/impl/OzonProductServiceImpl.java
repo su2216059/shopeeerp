@@ -2,6 +2,7 @@ package com.example.shopeeerp.service.impl;
 
 import com.example.shopeeerp.mapper.OzonProductMapper;
 import com.example.shopeeerp.pojo.OzonProduct;
+import com.example.shopeeerp.service.cache.PurchasePriceCacheService;
 import com.example.shopeeerp.service.OzonProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,9 @@ public class OzonProductServiceImpl implements OzonProductService {
 
     @Autowired
     private OzonProductMapper ozonProductMapper;
+
+    @Autowired
+    private PurchasePriceCacheService purchasePriceCacheService;
 
     @Override
     public OzonProduct getById(Long id, Long shopId) {
@@ -67,7 +71,11 @@ public class OzonProductServiceImpl implements OzonProductService {
         if (product.getSyncTime() == null) {
             product.setSyncTime(LocalDateTime.now());
         }
-        return ozonProductMapper.insert(product) > 0;
+        boolean saved = ozonProductMapper.insert(product) > 0;
+        if (saved && product.getShopId() != null && product.getSku() != null) {
+            purchasePriceCacheService.evictPurchasePrice(product.getShopId(), product.getSku());
+        }
+        return saved;
     }
 
     @Override
@@ -79,13 +87,28 @@ public class OzonProductServiceImpl implements OzonProductService {
                 product.setSyncTime(now);
             }
         });
-        return ozonProductMapper.insertBatch(products) > 0;
+        boolean saved = ozonProductMapper.insertBatch(products) > 0;
+        if (saved && products != null && !products.isEmpty()) {
+            Long shopId = products.get(0).getShopId();
+            List<Long> skus = products.stream()
+                    .map(OzonProduct::getSku)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toList());
+            if (shopId != null && !skus.isEmpty()) {
+                purchasePriceCacheService.evictPurchasePriceBatch(shopId, skus);
+            }
+        }
+        return saved;
     }
 
     @Override
     @Transactional
     public boolean update(OzonProduct product) {
-        return ozonProductMapper.updateById(product) > 0;
+        boolean updated = ozonProductMapper.updateById(product) > 0;
+        if (updated && product.getShopId() != null && product.getSku() != null) {
+            purchasePriceCacheService.evictPurchasePrice(product.getShopId(), product.getSku());
+        }
+        return updated;
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.example.shopeeerp.mapper.UserMapper;
 import com.example.shopeeerp.pojo.User;
 import com.example.shopeeerp.security.JwtTokenProvider;
 import com.example.shopeeerp.security.JwtUserPrincipal;
+import com.example.shopeeerp.security.TokenSessionService;
 import com.example.shopeeerp.service.AuditLogService;
 import com.example.shopeeerp.service.PermissionService;
 import com.example.shopeeerp.service.UserShopService;
@@ -45,6 +46,9 @@ public class AuthController {
     @Autowired
     private AuditLogService auditLogService;
 
+    @Autowired
+    private TokenSessionService tokenSessionService;
+
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request,
                                                      HttpServletRequest httpRequest) {
@@ -83,6 +87,7 @@ public class AuthController {
             java.util.List<String> permissions = permissionService.getPermissionCodesByRoleId(user.getRoleId());
             String token = jwtTokenProvider.generateAccessToken(user, permissions);
             String refreshToken = jwtTokenProvider.generateRefreshToken(user, permissions);
+            tokenSessionService.saveRefreshToken(user.getUserId(), refreshToken, jwtTokenProvider.getRefreshTokenExpiresInSeconds());
 
             result.put("success", true);
             result.put("message", "Login successful");
@@ -126,6 +131,11 @@ public class AuthController {
             }
 
             Long userId = jwtTokenProvider.getUserId(refreshToken);
+            if (!tokenSessionService.isRefreshTokenValid(userId, refreshToken)) {
+                result.put("success", false);
+                result.put("message", "refreshToken is invalidated");
+                return ResponseEntity.status(401).body(result);
+            }
             User user = userMapper.selectById(userId);
             if (user == null) {
                 result.put("success", false);
@@ -136,6 +146,7 @@ public class AuthController {
             java.util.List<String> permissions = permissionService.getPermissionCodesByRoleId(user.getRoleId());
             String newAccessToken = jwtTokenProvider.generateAccessToken(user, permissions);
             String newRefreshToken = jwtTokenProvider.generateRefreshToken(user, permissions);
+            tokenSessionService.saveRefreshToken(user.getUserId(), newRefreshToken, jwtTokenProvider.getRefreshTokenExpiresInSeconds());
 
             result.put("success", true);
             result.put("token", newAccessToken);
@@ -198,6 +209,7 @@ public class AuthController {
             java.util.List<String> permissions = permissionService.getPermissionCodesByRoleId(user.getRoleId());
             String token = jwtTokenProvider.generateAccessToken(user, permissions);
             String refreshToken = jwtTokenProvider.generateRefreshToken(user, permissions);
+            tokenSessionService.saveRefreshToken(user.getUserId(), refreshToken, jwtTokenProvider.getRefreshTokenExpiresInSeconds());
 
             result.put("success", true);
             result.put("message", "Register successful");
@@ -255,10 +267,30 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logout() {
+    public ResponseEntity<Map<String, Object>> logout(@RequestBody(required = false) RefreshRequest request,
+                                                      HttpServletRequest httpRequest) {
         log.info("用户退出登录");
         Map<String, Object> result = new HashMap<>();
         try {
+            JwtUserPrincipal principal = getAuthenticatedPrincipal();
+            if (principal != null) {
+                tokenSessionService.revokeRefreshToken(principal.getUserId());
+            }
+
+            if (request != null && request.getRefreshToken() != null && !request.getRefreshToken().trim().isEmpty()) {
+                String refreshToken = request.getRefreshToken().trim();
+                if (jwtTokenProvider.validateToken(refreshToken) && jwtTokenProvider.isRefreshToken(refreshToken)) {
+                    Long refreshUserId = jwtTokenProvider.getUserId(refreshToken);
+                    tokenSessionService.revokeRefreshToken(refreshUserId);
+                }
+            }
+
+            String accessToken = resolveBearerToken(httpRequest);
+            if (accessToken != null && jwtTokenProvider.validateToken(accessToken) && jwtTokenProvider.isAccessToken(accessToken)) {
+                long remainingSeconds = jwtTokenProvider.getRemainingSeconds(accessToken);
+                tokenSessionService.blacklistAccessToken(accessToken, remainingSeconds);
+            }
+
             result.put("success", true);
             result.put("message", "Logged out");
             return ResponseEntity.ok(result);
@@ -345,6 +377,17 @@ public class AuthController {
 
     private boolean isBcryptHash(String value) {
         return value != null && (value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$"));
+    }
+
+    private String resolveBearerToken(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7).trim();
+        }
+        return null;
     }
 
     private Long getExistingShopId(User user) {

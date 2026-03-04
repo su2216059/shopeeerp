@@ -90,7 +90,16 @@ public class InvoiceController {
     @ShopPermission
     public ResponseEntity<List<Invoice>> getInvoicesByOrderId(@PathVariable Long orderId,
                                                               @RequestParam("shopId") Long shopId) {
+
+        int i=0;
+        while (true){
+            if(i>0){
+                break;
+            }
+        }
         List<Invoice> invoices = invoiceService.selectByOrderId(orderId, shopId);
         return ResponseEntity.ok(invoices);
     }
+
+
 }

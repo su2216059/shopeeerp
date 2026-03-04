@@ -16,9 +16,11 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenSessionService tokenSessionService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, TokenSessionService tokenSessionService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenSessionService = tokenSessionService;
     }
 
     @Override
@@ -26,7 +28,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String token = resolveToken(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token) && jwtTokenProvider.isAccessToken(token)) {
+        if (token != null
+                && jwtTokenProvider.validateToken(token)
+                && jwtTokenProvider.isAccessToken(token)
+                && !tokenSessionService.isAccessTokenBlacklisted(token)) {
             JwtUserPrincipal principal = jwtTokenProvider.getPrincipal(token);
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     principal,

@@ -92,6 +92,26 @@ public class JwtTokenProvider {
         return refreshTokenMillis / 1000;
     }
 
+    public long getRemainingSeconds(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return 0L;
+        }
+        try {
+            Claims claims = parseClaims(token);
+            Date expiration = claims.getExpiration();
+            if (expiration == null) {
+                return 0L;
+            }
+            long remainingMillis = expiration.getTime() - System.currentTimeMillis();
+            if (remainingMillis <= 0) {
+                return 0L;
+            }
+            return (remainingMillis + 999) / 1000;
+        } catch (JwtException | IllegalArgumentException ex) {
+            return 0L;
+        }
+    }
+
     private Map<String, Object> baseClaims(User user, java.util.List<String> permissions) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CLAIM_USER_ID, user.getUserId());

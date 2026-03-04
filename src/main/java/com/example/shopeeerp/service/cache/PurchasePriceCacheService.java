@@ -6,8 +6,6 @@ import com.example.shopeeerp.util.RedisUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -139,6 +137,43 @@ public class PurchasePriceCacheService {
         return result;
     }
 
+    public void evictPurchasePrice(Long shopId, Long sku) {
+        if (shopId == null || sku == null) {
+            return;
+        }
+        if (!isRedisAvailable()) {
+            return;
+        }
+        try {
+            String key = RedisUtils.buildKey(shopId, String.valueOf(sku));
+            stringRedisTemplate.delete(key);
+        } catch (DataAccessException ex) {
+            log.warn("evict purchase price cache failed: shopId={}, sku={}", shopId, sku);
+        }
+    }
+
+    public void evictPurchasePriceBatch(Long shopId, List<Long> skus) {
+        if (shopId == null || skus == null || skus.isEmpty()) {
+            return;
+        }
+        if (!isRedisAvailable()) {
+            return;
+        }
+        List<String> keys = skus.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(sku -> RedisUtils.buildKey(shopId, String.valueOf(sku)))
+                .collect(Collectors.toList());
+        if (keys.isEmpty()) {
+            return;
+        }
+        try {
+            stringRedisTemplate.delete(keys);
+        } catch (DataAccessException ex) {
+            log.warn("batch evict purchase price cache failed: shopId={}, size={}", shopId, keys.size());
+        }
+    }
+
     private void backfillCache(Long shopId, List<Long> missSkus, Map<String, BigDecimal> loaded) {
         if (missSkus == null || missSkus.isEmpty()) {
             return;
@@ -170,5 +205,9 @@ public class PurchasePriceCacheService {
             } catch (Exception ignored) {
             }
         }
+    }
+
+    private boolean isRedisAvailable() {
+        return redisEnabled && stringRedisTemplate != null;
     }
 }

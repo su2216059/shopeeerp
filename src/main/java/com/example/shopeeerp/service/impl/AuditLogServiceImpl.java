@@ -4,10 +4,13 @@ import com.example.shopeeerp.mapper.AuditLogMapper;
 import com.example.shopeeerp.pojo.AuditLog;
 import com.example.shopeeerp.service.AuditLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ibatis.cursor.Cursor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -96,4 +99,5 @@ public class AuditLogServiceImpl implements AuditLogService {
         }
         return request.getRemoteAddr();
     }
+
 }
